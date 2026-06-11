@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Load environment variables from the root .env file
+. ../.env
+
+# Run the verification script for MockUSDT
+npx hardhat run scripts/verifyMockUSDT.ts --network $NEXT_PUBLIC_NETWORK

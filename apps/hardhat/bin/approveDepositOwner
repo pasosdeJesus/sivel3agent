@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Load environment variables from the root .env file
+. ../.env
+
+# Run the script to approve the deposit owner
+npx hardhat run scripts/approveDepositOwner.ts --network $NEXT_PUBLIC_NETWORK

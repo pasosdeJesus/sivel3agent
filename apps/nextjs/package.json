@@ -1,0 +1,48 @@
+
+{
+  "name": "sivel3agent",
+  "version": "0.0.0",
+  "description": "SIVeL 3 Agetn ERC-8004 -a",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "dotenv -e ../.env.test -- vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pasosdejesus/m": "gitlab:pasosdejesus/m",
+    "dotenv": "^17.4.2",
+    "kysely-postgres-js": "3.0.0",
+    "next": "15.5.12",
+    "pg": "8.17.2",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.3.2",
+    "@types/node": "20.19.30",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "dotenv-cli": "^7.4.4",
+    "jsdom": "^29.1.1",
+    "kysely": "0.27.6",
+    "kysely-codegen": "0.19.0",
+    "kysely-ctl": "0.20.0",
+    "next-auth": "4.24.13",
+    "postcss": "^8.5.15",
+    "siwe": "2.3.2",
+    "tailwindcss": "3.4.19",
+    "typescript": "5.9.3",
+    "viem": "^2.51.0",
+    "vitest": "1.6.1",
+    "wagmi": "2.19.5"
+  },
+  "packageManager": "pnpm@10.34.1"
+}

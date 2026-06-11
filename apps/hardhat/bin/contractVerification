@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Load environment variables from the root .env file
+. ../.env
+
+# Run the verification script, which will read the necessary variables
+# from the environment.
+# The network is specified via the NETWORK variable in the .env file.
+npx hardhat run scripts/verifyDeployment.ts --network $NEXT_PUBLIC_NETWORK
