@@ -1,3 +1,7 @@
-REQ
 .env
-node_modules
+.env.test
+node_modules/
+.next/
+dist/
+REQ
+*.log

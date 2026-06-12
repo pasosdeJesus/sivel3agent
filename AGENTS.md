@@ -70,4 +70,6 @@ framework and principles.
 
 **Testing:** See `CONTRIBUTING.md` and `@pasosdejesus/m/src/test-utils/README.md`. Use `createMockKysely()` from `@pasosdejesus/m/test-utils` for DB mocks, not raw `vi.mock()`.
 
+**Git operations:** The AI agent **must not** execute write git commands (`git commit`, `git push`, `git merge`, `git rebase`, `git tag`, `git stash`, `git branch -d`, etc.). Read-only operations (`git status`, `git diff`, `git log`, `git blame`) are permitted. Only the human maintainer performs write operations.
+
 
