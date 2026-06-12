@@ -1,4 +1,4 @@
-.PHONY: test type dev
+.PHONY: test type dev health
 
 test:
 	CI=true DOTENV_QUIET=true npx vitest run
@@ -11,6 +11,9 @@ type-check-tests:
 
 format:
 	pnpm format
+
+health:
+	npx tsx scripts/health.ts
 
 dev:
 	./bin/dev
