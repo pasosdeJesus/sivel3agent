@@ -65,6 +65,8 @@ framework and principles.
 - `@pasosdejesus/m` sources at `/home/vtamara/comp/m`
 
 **Critical conventions:**
+- **Wallet operations**: Always use `bin/m wallet:*`. Never access private keys
+  directly. Wallets stored in `~/.m/wallets/` (chmod 600), referenced by name.
 - **Wallet addresses**: lowercase once at API boundary, never EIP-55 mixed-case
 - **@pasosdejesus/m** uses `export *` barrel — if imports break at runtime, check `serverExternalPackages` in `next.config.ts`
 
