@@ -1,124 +1,297 @@
 ---
-title: Register AI agent on ERC-8004 Identity Registry
-labels: smart-contract, onchain, configuration
+title: Register AI agent with Self Agent ID (ERC-8004 + proof-of-human)
+labels: smart-contract, onchain, identity, reputation
 ---
 
 ## Description
 
-Register the `sivel3agent` on the **ERC-8004 Agent Trust Protocol** identity registry on Celo Sepolia, establishing its on-chain identity and reputation. This is a prerequisite for the agent to be recognized as a legitimate autonomous entity in the SIVeL 3 ecosystem and to interact with the `PreAlertMarket.sol` contract as a trusted pre-alert publisher.
+Register the `sivel3agent` using **Self Agent ID** (https://app.ai.self.xyz). This gives the agent:
 
-ERC-8004 defines an on-chain identity and reputation registry for AI agents. Registration gives the agent a verifiable identity that smart contracts and users can check before interacting with it.
+- An on-chain identity (ERC-8004)
+- Proof-of-human (biometric, via passport/ID)
+- Sybil resistance (1 human → 1 agent)
+- Verifiable credentials (age, OFAC, nationality, etc.)
 
-The registration will link the project's main wallet (owner) with the agent's operational wallet (which will run on the LLM server), creating a secure, two-wallet architecture.
+Unlike a basic ERC-8004 registration (which only stores a URI), Self Agent ID adds a **zero-knowledge proof** that the agent is backed by a real human. No personal data is uploaded – only a cryptographic proof is stored on-chain. The human operator scans a QR code with the Self mobile app, and the app generates the proof on-device using the operator's passport or ID.
+
+This registration is required for the agent to be trusted in the SIVeL 3 ecosystem. Documenters, validators, and citizens will be able to verify that the agent is human-backed before trusting its pre-alerts.
+
+---
+
+## Why Self Agent ID?
+
+| Feature | Basic ERC-8004 | Self Agent ID |
+|---------|----------------|---------------|
+| On-chain identity | ✅ | ✅ |
+| Proof-of-human | ❌ | ✅ (biometric ZK proof) |
+| Sybil-resistant | ❌ | ✅ (1 human → 1 agent) |
+| Age verification | ❌ | ✅ (18+ or 21+) |
+| OFAC/sanctions check | ❌ | ✅ |
+| Nationality verification | ❌ | ✅ (optional) |
+| Verifiable by any service | 🟡 (only wallet) | ✅ (full credentials) |
+
+For a project documenting political violence, **trust is non-negotiable**. Self Agent ID provides the strongest possible assurance that the agent is operated by a legitimate human from Pasos de Jesús, not a malicious actor.
+
+---
+
+## Registration Mode: `ed25519-linked`
+
+We will use **`ed25519-linked`** mode:
+
+| Parameter | Value | Reason |
+|-----------|-------|--------|
+| **Agent key type** | Ed25519 | Industry standard for AI agents; secure and widely supported |
+| **Guardian wallet** | `0x01a72816110a88883F79026C0199827fCF9184c8` (sivel3 development wallet on Sepolia) | Allows the project to revoke the agent if needed |
+| **Network** | Celo Sepolia (testnet) | For hackathon and testing; mainnet registration will follow |
+| **Agent URI** | `https://sivel.xyz:9001/agent/sivel3agent-dev.json` | Agent metadata (name, description, services) |
+
+The `linked` mode means the agent's Ed25519 key is registered on-chain, and the guardian wallet (ECDSA) has the power to revoke the agent's identity. This is the recommended pattern for production agents.
+
+---
+
+## Prerequisites
+
+### Human operator requirements
+
+- [ ] Install the **Self app** on iOS or Android from the official app store
+- [ ] Complete the one-time identity verification in the Self app:
+    - Scan a passport or government ID (biometric)
+    - This is done **once per human**, not per agent
+    - No personal data is uploaded – a ZK proof is generated on-device
+- [ ] Ensure the Self app is ready to scan QR codes (no additional setup required per agent)
+
+### Technical prerequisites
+
+- [ ] Node.js installed (for CLI or SDK)
+- [ ] Access to the project's development wallet (`0x01a728...`) – not strictly required for registration, as Self handles the on-chain transaction, but needed if you choose the `linked` mode with a guardian
+- [ ] The agent metadata JSON must be publicly accessible at `https://sivel.xyz:9001/agent/sivel3agent-dev.json`
 
 ---
 
 ## Tasks
 
-### 1. Prepare agent metadata
+### 1. Prepare agent metadata JSON
 
-- [ ] Create an `agent-metadata.json` file following ERC-8004 metadata schema:
-  - `name`: `"SIVeL 3 Scout Agent"`
-  - `description`: `"AI agent that monitors public sources (RSS, APIs) to detect socio-political violence events in Colombia and Palestine. Generates structured pre-alerts following the CINEP methodology for the SIVeL 3 ecosystem."`
-  - `type`: Use the spec URI `"https://eips.ethereum.org/EIPS/eip-8004#registration-v1"` (NOT the deprecated `"type": "Agent"`)
-  - `version`: `"1.0.0"`
-  - `agentType`: `"Scout"`
-  - `services`: Array with at least one entry — `{ "name": "health", "endpoint": "https://sivel.xyz/api/agent/health" }` (NOT the deprecated `endpoints` array with `url`)
-  - `supportedTrust`: `["reputation"]`
-  - `createdAt`: ISO timestamp
-- [ ] **Critical compliance check** (from celopedia-skill §Important Rules §11):
-  - ❌ Deprecated: `"type": "Agent"`, `endpoints` array, `url` field, `https://` agentURI
-  - ✅ Required: `type` MUST be the spec URI, `services` array with `name`/`endpoint`, prefer `ipfs://` for agentURI
-- [ ] Upload metadata to IPFS (preferred) or host at `https://sivel.xyz/agent/sivel3agent.json`:
-  - If using IPFS: `ipfs add agent-metadata.json` and use `ipfs://<CID>`
-  - If hosting: save as `apps/nextjs/public/agent/sivel3agent.json` (accessible at `https://sivel.xyz/agent/sivel3agent.json`)
+- [ ] Create `apps/nextjs/public/agent/sivel3agent-dev.json` in the `sivel3` repository with the following content:
 
+```json
+{
+  "name": "SIVeL 3 Scout Agent",
+  "description": "AI agent that autonomously monitors public news sources (RSS, APIs) to detect socio-political violence events in Colombia and Palestine. Generates structured pre-alerts following the CINEP methodology for the SIVeL 3 ecosystem.",
+  "version": "1.0.0",
+  "agentType": "Scout",
+  "owner": "Pasos de Jesús",
+  "services": [
+    {
+      "name": "health",
+      "endpoint": "https://sivel.xyz:9001/api/agent/health"
+    },
+    {
+      "name": "pre-alert-sync",
+      "endpoint": "https://sivel.xyz:9001/api/pre-alerts/sync"
+    }
+  ],
+  "supportedTrust": ["reputation", "human-backing"],
+  "createdAt": "2026-06-13T00:00:00Z"
+}
+```
 
-#### Agent URI by Environment
+- [ ] Verify the file is accessible: `curl https://sivel.xyz:9001/agent/sivel3agent-dev.json`
 
-| Environment | Physical File | agentURI |
-|-------------|---------------|----------|
-| **Development / Sepolia (testnet)** | `apps/nextjs/public/agent/sivel3agent-dev.json` | `https://sivel.xyz:9001/agent/sivel3agent-dev.json` |
-| **Production / Celo Mainnet** | `apps/nextjs/public/agent/sivel3agent.json` | `https://sivel.xyz:9001/agent/sivel3agent.json` |
+### 2. Generate Ed25519 key pair for the agent
 
-**Important notes:**
-- The `:9001` port is acceptable for testnet (Sepolia) and development environments
-- For mainnet production, consider migrating to IPFS (`ipfs://`) or a standard port (443) before final deployment
-- The server at `sivel.xyz:9001` must be publicly accessible and running during registration
-- The `-dev` suffix allows safe experimentation on testnet without affecting the production agent profile
-- Both agent profiles can coexist simultaneously on different networks (Sepolia vs Mainnet)
+- [ ] Generate a secure Ed25519 private key:
+```bash
+# Using OpenSSL
+openssl genpkey -algorithm ed25519 -out agent-key.pem
+# Extract the public key
+openssl pkey -in agent-key.pem -pubout -out agent-pub.pem
+# Encode the public key in base64 (required for Self API)
+cat agent-pub.pem | grep -v "PUBLIC KEY" | tr -d '\n' | base64
+```
 
-### 2. Register on ERC-8004 registry
+- [ ] Store the private key securely (same security level as `~/.m/wallets/` – never commit to git)
+- [ ] Record the public key (base64) for the registration step
 
-- [ ] Identify the ERC-8004 Identity Registry contract address on Celo Sepolia:
-  - Expected address (from celopedia-skill): `0x8004A818BFB912233c491871b3d84c89A494BD9e` for Celo Sepolia
-  - Verify at `https://app.ai.self.xyz` before proceeding
-- [ ] Register the agent via the registry contract using `bin/m wallet:send`:
-  ```bash
-  ./bin/m wallet:send --name sivel3agent \
-    --to <REGISTRY_ADDRESS> \
-    --function "registerAgent(string)" \
-    --args "<agentURI>" \
-    --network celoSepolia
-  ```
-  Where `<agentURI>` is `ipfs://<CID>` or `https://sivel.xyz/agent/sivel3agent.json`
-- [ ] **If using two-wallet architecture** (owner wallet ≠ agent wallet):
-  - First, register using the owner wallet (`CREDENTIALS_PRIVATE_KEY`)
-  - Then, link the operational wallet using `setAgentWallet(uint256 tokenId, address newWallet, uint256 deadline, bytes memory signature)`
-  - The signature must be generated by the operational wallet (`sivel3agent`) using `bin/m wallet:sign`
-- [ ] Verify registration by reading back the registered metadata
-- [ ] Record the transaction hash and registration timestamp
+### 3. Register the agent using Self Agent ID
 
-### 3. Document agent identity
+**Option A: Using the Self CLI (recommended for simplicity)**
 
-- [ ] Add the agent's ERC-8004 registration details to `apps/.env`:
-  - `AGENT_ERC8004_REGISTRY=<registry contract address>`
-  - `AGENT_ERC8004_TOKEN_ID=<assigned token ID>`
-  - `AGENT_WALLET_ADDRESS=0x8C88169977c180f6380C01daAA9c7F31894c20dc`
-- [ ] Update `apps/.env.example` with the new variables
-- [ ] Add registration details to `ARCHITECTURE.md` §Architecture Decisions
-- [ ] Document the registration in `AGENTS.md` or `doc/agent-registration.md`
+```bash
+# Install the Self CLI globally (if not already)
+npm install -g @selfxyz/cli
 
-### 4. Verify integration readiness
+# Run registration
+self-agent register \
+  --mode ed25519-linked \
+  --network celoSepolia \
+  --guardian-wallet 0x01a72816110a88883F79026C0199827fCF9184c8 \
+  --agent-uri https://sivel.xyz:9001/agent/sivel3agent-dev.json \
+  --ed25519-private-key <path-to-agent-key.pem> \
+  --output registration-info.json
+```
 
-- [ ] Confirm `bin/m wallet:list --name sivel3agent --balance --network celoSepolia` shows sufficient CELO (31.99 S-CELO from #1)
-- [ ] Test that the agent's health endpoint is accessible (if hosted)
-- [ ] Document how smart contracts (e.g., `PreAlertMarket.sol`) can verify the agent via `isAgent(address)`
+The CLI will:
+- Generate a challenge
+- Sign it with your Ed25519 key
+- Submit the registration to Self API
+- Output a QR code
+
+**Option B: Using the Self API directly (more control)**
+
+Step 1 – Request a challenge:
+```bash
+curl -X POST https://app.ai.self.xyz/api/agent/register/ed25519-challenge \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ed25519PublicKey": "<base64-public-key>",
+    "network": "celoSepolia"
+  }'
+```
+
+Step 2 – Sign the challenge (using the Ed25519 private key) – this step requires a small script (see `scripts/sign-challenge.ts` in `sivel3agent`)
+
+Step 3 – Submit registration:
+```bash
+curl -X POST https://app.ai.self.xyz/api/agent/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "ed25519-linked",
+    "ed25519PublicKey": "<base64-public-key>",
+    "ed25519Signature": "<base64-signature>",
+    "challengeId": "<challenge-id>",
+    "network": "celoSepolia",
+    "agentURI": "https://sivel.xyz:9001/agent/sivel3agent-dev.json",
+    "guardianWallet": "0x01a72816110a88883F79026C0199827fCF9184c8"
+  }'
+```
+
+Step 4 – Complete human verification:
+- The response will contain a session token and a QR code (as a data URL or text)
+- The human operator scans the QR code with the **Self app**
+- The app verifies the human's identity (using the already-set-up passport/ID)
+- The app generates a ZK proof and submits it to Self
+- Self emits the on-chain registration transaction
+
+Step 5 – Poll registration status:
+```bash
+curl "https://app.ai.self.xyz/api/agent/register/status?sessionToken=<token>"
+```
+
+### 4. Verify registration success
+
+- [ ] Confirm the registration transaction appears on Celo Sepolia Blockscout
+- [ ] Query the agent's identity:
+```bash
+# Using the Self API
+curl "https://app.ai.self.xyz/api/agent/identify?network=celoSepolia&agentAddress=<agent-ed25519-public-key>"
+```
+- [ ] Test the agent's verification using the demo endpoint:
+```bash
+# This requires the agent to sign a request (see SDK documentation)
+curl -X POST https://app.ai.self.xyz/api/demo/verify?network=celoSepolia \
+  -H "x-self-agent-signature: ..." \
+  -H "x-self-agent-timestamp: ..." \
+  -H "x-self-agent-key: <base64-public-key>" \
+  -H "x-self-agent-keytype: ed25519"
+```
+
+### 5. Document the registration
+
+- [ ] Record the following in `ARCHITECTURE.md` (sivel3agent) and `AGENTS.md`:
+    - `AGENT_SELF_ID` (the on-chain agent identifier)
+    - `AGENT_ED25519_PUBLIC_KEY` (base64)
+    - `AGENT_REGISTRATION_TX_HASH`
+    - `AGENT_GUARDIAN_WALLET` (`0x01a728...`)
+    - `SELF_REGISTRY_ADDRESS` (Celo Sepolia: `0x043DaCac8b0771DD5b444bCC88f2f8BBDBEdd379` – from Self documentation)
+- [ ] Add the Ed25519 public key to `apps/.env` (as `AGENT_ED25519_PUBLIC_KEY`)
+- [ ] Document the human operator's Self app verification status (which human from Pasos de Jesús completed it)
+
+### 6. (Optional) Test agent-to-agent communication
+
+Once registered, the agent can authenticate itself to any service running the Self verifier:
+
+```typescript
+import { SelfAgentClient } from "@selfxyz/agent-sdk";
+
+const agent = new SelfAgentClient({
+  privateKey: "<ed25519-private-key>",
+  keyType: "ed25519",
+  network: "celoSepolia"
+});
+
+// Signed request to any service that verifies Self Agent IDs
+const response = await agent.fetch("https://some-service.com/api/protected", {
+  method: "POST",
+  body: JSON.stringify({ preAlertId: 123 })
+});
+```
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Agent metadata is valid per ERC-8004 schema (no deprecated fields, verified by `app.ai.self.xyz` or similar validator)
-- [ ] Registration transaction is confirmed on Celo Sepolia Blockscout
-- [ ] `AGENT_ERC8004_REGISTRY` and `AGENT_ERC8004_TOKEN_ID` are set in `apps/.env`
-- [ ] Agent identity is documented in `ARCHITECTURE.md`
-- [ ] The registration is referenced in the hackathon submission tweet and dashboard
+- [ ] Agent metadata JSON is publicly accessible at `https://sivel.xyz:9001/agent/sivel3agent-dev.json`
+- [ ] The Self CLI or API registration completes successfully
+- [ ] A human operator (from Pasos de Jesús) scans the QR code with the Self app
+- [ ] The Self app generates a ZK proof and submits it
+- [ ] The on-chain registration transaction is confirmed on Celo Sepolia
+- [ ] The agent has proof-of-human (strength ≥ 50, as shown in Self's verification)
+- [ ] The guardian wallet (`0x01a728...`) is correctly set in the registry
+- [ ] The agent can be verified via Self's demo endpoint or SDK verifier
+- [ ] Registration details are documented in `ARCHITECTURE.md` and `AGENTS.md`
 
 ---
 
 ## Dependencies
 
-- [x] #1 — Base agent structure (wallet `sivel3agent` funded with 31.99 S-CELO)
+- **Human operator**: Requires a human with the Self app installed and passport/ID already verified
+- **Technical**: None (this registration is independent of other issues, though it logically follows `sivel3agent#1`)
 
 ---
 
 ## Related
 
 - Epic: https://github.com/pasosdeJesus/sivel3/issues/36
-- Blocks: #43 (PreAlertMarket.sol contract — needs the agent to be registered before the contract can verify it)
-- Reference: celopedia-skill → `ai-agents.md`, ERC-8004 metadata compliance rules
-- Registration dashboard: https://app.ai.self.xyz
+- Blocks: #43 (PreAlertMarket.sol – the contract can verify the agent via Self)
+- Self Agent ID documentation: https://app.ai.self.xyz/llms.txt
+- Self Agent ID explorer: https://app.ai.self.xyz
 
 ---
 
 ## Notes for the Developer
 
-- **Metadata compliance is enforced**: deprecated patterns (`"type": "Agent"`, `endpoints` array, `url` field, `https://` agentURI) trigger validator warnings. See celopedia-skill §Important Rules §11.
-- **Gas**: The agent already has 31.99 S-CELO from issue #1 — sufficient for registration.
-- **Registry address**: Must be confirmed from celopedia-skill references or `app.ai.self.xyz` before running the registration command.
-- **Two-wallet architecture**:
-  - Owner wallet (`CREDENTIALS_PRIVATE_KEY`) — holds the ERC-8004 token, managed securely in `sivel3`
-  - Operational wallet (`sivel3agent`) — signs transactions, stored on the LLM server via `bin/m wallet:`
-  - This separation ensures that compromise of the LLM server does not grant ownership of the agent identity
-- **IPFS vs hosted metadata**: IPFS is preferred for immutability. If using hosted URL, ensure the file remains accessible and unchanged.
+- **This registration is for the agent's identity and reputation, not for transaction signing.** The agent will still use its ECDSA wallet (`0x8C8816...` from `sivel3agent#1`) to call `publishPreAlert` on `PreAlertMarket.sol`. The Ed25519 key is only for authentication and verification services.
+- **The human operator must have the Self app ready.** This is a one-time setup per human. Once completed, the human can verify any number of agents by scanning QR codes.
+- **Privacy:** No personal data is ever uploaded. The Self app generates a ZK proof on-device. The only on-chain data is the proof and the agent's public key.
+- **Sybil resistance:** The same human cannot register unlimited agents. Self enforces 1 human → 1 agent (configurable).
+- **Cost:** Registration requires gas on Celo Sepolia (minimal). The agent's guardian wallet must have a small amount of CELO to submit the transaction if using `linked` mode.
+- **Fallback:** If the Self API or CLI fails, you can use the **web wizard** at https://app.ai.self.xyz, selecting "Ed25519 + linked wallet" mode. The QR code approach is identical.
+
+---
+
+## Example registration output (expected)
+
+```json
+{
+  "success": true,
+  "agentId": "eip155:11142220:0x8C8816...",
+  "transactionHash": "0x...",
+  "sessionToken": "abc123",
+  "qrCodeData": "https://app.ai.self.xyz/verify?session=abc123",
+  "verificationStatus": "pending_human"
+}
+```
+
+After human scans the QR code:
+
+```json
+{
+  "success": true,
+  "agentId": "eip155:11142220:0x8C8816...",
+  "status": "registered",
+  "proofOfHuman": {
+    "strength": 100,
+    "method": "biometric_passport_nfc"
+  }
+}
