@@ -33,6 +33,21 @@ The registration will link the project's main wallet (owner) with the agent's op
   - If using IPFS: `ipfs add agent-metadata.json` and use `ipfs://<CID>`
   - If hosting: save as `apps/nextjs/public/agent/sivel3agent.json` (accessible at `https://sivel.xyz/agent/sivel3agent.json`)
 
+
+#### Agent URI by Environment
+
+| Environment | Physical File | agentURI |
+|-------------|---------------|----------|
+| **Development / Sepolia (testnet)** | `apps/nextjs/public/agent/sivel3agent-dev.json` | `https://sivel.xyz:9001/agent/sivel3agent-dev.json` |
+| **Production / Celo Mainnet** | `apps/nextjs/public/agent/sivel3agent.json` | `https://sivel.xyz:9001/agent/sivel3agent.json` |
+
+**Important notes:**
+- The `:9001` port is acceptable for testnet (Sepolia) and development environments
+- For mainnet production, consider migrating to IPFS (`ipfs://`) or a standard port (443) before final deployment
+- The server at `sivel.xyz:9001` must be publicly accessible and running during registration
+- The `-dev` suffix allows safe experimentation on testnet without affecting the production agent profile
+- Both agent profiles can coexist simultaneously on different networks (Sepolia vs Mainnet)
+
 ### 2. Register on ERC-8004 registry
 
 - [ ] Identify the ERC-8004 Identity Registry contract address on Celo Sepolia:
@@ -107,4 +122,3 @@ The registration will link the project's main wallet (owner) with the agent's op
   - Operational wallet (`sivel3agent`) — signs transactions, stored on the LLM server via `bin/m wallet:`
   - This separation ensures that compromise of the LLM server does not grant ownership of the agent identity
 - **IPFS vs hosted metadata**: IPFS is preferred for immutability. If using hosted URL, ensure the file remains accessible and unchanged.
-```
