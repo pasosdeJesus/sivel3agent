@@ -6,7 +6,7 @@ status: closed — Self Agent ID blocked, ERC-8004 basic completed
 
 ## Outcome
 
-**Self Agent ID (proof-of-human) is not operational.** We attempted registration on both Celo Sepolia (testnet) and Celo Mainnet across multiple sessions, using both the REST API and the web wizard at https://app.ai.self.xyz. **ERC-8004 basic registration completed successfully on Celo Sepolia.**
+**Self Agent ID (proof-of-human) is not operational.** We attempted registration on both Celo Sepolia (testnet) and Celo Mainnet across multiple sessions, using both the REST API and the web wizard at https://app.ai.self.xyz. **ERC-8004 basic registration completed successfully on Celo Sepolia and Celo Mainnet.**
 
 ---
 
@@ -72,13 +72,33 @@ Metadata served at `https://sivel.xyz:9001/agent/sivel3agent-dev.json` is ERC-80
 ### Ed25519 Keys Generated ✅
 Stored in `apps/.env` — ready for future Self Agent ID retry or other Ed25519-based auth.
 
+### ERC-8004 Basic Registration (Celo Mainnet) ✅
+
+| Field | Value |
+|-------|-------|
+| Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| Token ID | `9330` |
+| Owner | `0x9F636E5653b649b44c9375E6E103600AE55aF979` (sivel3 production wallet) |
+| Agent URI | `https://sivel.xyz/agent/sivel3agent.json` |
+| Transaction | `0xe3d7c6faeb9a90a060a576af79f35d869003c3a47d781d69a5ce1afaff34938a` |
+| Block | `69456462` |
+
+Command used:
+```bash
+./bin/m wallet:send --name sivel3 \
+  --to 0x8004A169FB4a3325136EB29fA0ceB6D2e539a432 \
+  --function "register(string)" \
+  --args "https://sivel.xyz/agent/sivel3agent.json" \
+  --network celo --rpc https://forno.celo.org
+```
+
 ---
 
 ## Decision
 
 Use **ERC-8004 basic** as the agent's on-chain identity for now. When Self Agent ID stabilizes (relayer fixed, on-chain mint working), we will retry registration. The Ed25519 keys and metadata are already prepared.
 
-**Impact on PreAlertMarket.sol**: The contract should verify agents via `isAgent(address)` on the ERC-8004 registry (`0x8004A818...` on Sepolia, `0xaC3DF9...` on mainnet) rather than the Self registry. This is a simpler integration and works today.
+**Impact on PreAlertMarket.sol**: The contract should verify agents via `isAgent(address)` on the ERC-8004 registry (`0x8004A818...` on Sepolia, `0x8004A169...` on mainnet) rather than the Self registry. This is a simpler integration and works today.
 
 ---
 
