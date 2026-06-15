@@ -27,6 +27,7 @@ This repository is the **AI agent** component of the SIVeL 3 ecosystem. It is an
 *   **`apps/nextjs/` (TS):** `pnpm lint`, `pnpm format`
 *   Prefer explicit types over inference for function signatures
 *   Database queries via Kysely with typed `DB` interface
+*   **Database table names:** Use singular nouns (e.g., `source`, not `sources`)
 
 ---
 
