@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 180URZVxbTkOmtNeDIybeogtzuPZez5nbo6QGXiZAV5jexzKEJdeuj8EorlLj2y
+\restrict
 
 -- Dumped from database version 17.7 (Ubuntu 17.7-0ubuntu0.25.04.1)
 -- Dumped by pg_dump version 17.7 (Ubuntu 17.7-0ubuntu0.25.04.1)
@@ -223,5 +223,5 @@ ALTER TABLE ONLY public.pre_alert_source
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 180URZVxbTkOmtNeDIybeogtzuPZez5nbo6QGXiZAV5jexzKEJdeuj8EorlLj2y
+\unrestrict
 

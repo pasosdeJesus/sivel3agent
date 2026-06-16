@@ -11,8 +11,10 @@ interface FeedConfig {
 
 const RSS_FEEDS: FeedConfig[] = [
   { url: 'https://indepaz.org.co/feed/', medium: 'INDEPAZ', region: 'Colombia' },
-  { url: 'https://www.eltiempo.com/justicia/conflicto-y-narcotrafico/feed', medium: 'El Tiempo', region: 'Colombia' },
-  { url: 'https://www.hrw.org/feed/feed/rss/americas', medium: 'HRW', region: 'Colombia' },
+  { url: 'https://www.eltiempo.com/rss/justicia_conflicto-y-narcotrafico.xml', medium: 'El Tiempo', region: 'Colombia' },
+  { url: 'https://www.hrw.org/rss/news', medium: 'HRW', region: 'Colombia' },
+  { url: 'https://reliefweb.int/updates/rss.xml?search=primary_country.iso3:PSE', medium: 'ReliefWeb', region: 'Palestine' },
+  { url: 'https://miputumayo.com.co/feed/', medium: 'MiPutumayo Noticias', region: 'Putumayo' },
 ]
 
 const START_DATE = new Date('2025-07-01')
@@ -67,7 +69,7 @@ function cleanHTML(html: string): string {
   return text
 }
 
-async function saveArticle(article: Article): Promise<number | null> {
+async function saveArticle(article: Article, region: string): Promise<number | null> {
   const db = newKyselyPostgresql()
 
   const existing = await db
@@ -102,7 +104,7 @@ async function saveArticle(article: Article): Promise<number | null> {
       content_hash: article.contentHash,
       raw_content: article.rawContent,
       clean_text: article.cleanText,
-      metadata: { region: article.medium === 'Al Jazeera' ? 'Palestine' : 'Colombia' },
+      metadata: { region },
     })
     .returning('id')
     .executeTakeFirst()
@@ -121,7 +123,7 @@ async function scrapeAllFeeds() {
       console.log(`Found ${articles.length} articles in date range`)
 
       for (const article of articles) {
-        await saveArticle(article)
+        await saveArticle(article, feed.region)
       }
     } catch (error) {
       console.error(`Error fetching ${feed.url}:`, error)
