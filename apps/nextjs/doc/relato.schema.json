@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sivel.xyz/schemas/relato.schema.json",
+  "title": "Pre-Alert (Relato)",
+  "description": "Structured pre-alert following SIVeL methodology and CINEP Data Bank conceptual framework for documenting political violence events.",
+  "type": "object",
+  "required": ["eventType", "date", "location", "description"],
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "description": "Classification of the violent event per IHL categories and CINEP Data Bank typology.",
+      "examples": [
+        "Political homicide",
+        "Forced disappearance",
+        "Torture",
+        "Massacre",
+        "Sexual violence",
+        "Forced displacement",
+        "Attack on civilian population",
+        "Indiscriminate attack",
+        "Attack on medical mission",
+        "Attack on educational infrastructure",
+        "Use of explosive weapons in populated areas",
+        "Extrajudicial execution",
+        "Arbitrary detention",
+        "Threat against human rights defenders",
+        "Collective punishment",
+        "Settler violence",
+        "Military incursion into humanitarian zone"
+      ]
+    },
+    "date": {
+      "type": "string",
+      "description": "Date or approximate date of the event.",
+      "examples": ["2026-06-10", "2026-06", "2026-06-10/2026-06-12"]
+    },
+    "location": {
+      "type": "object",
+      "required": ["region"],
+      "properties": {
+        "region": {
+          "type": "string",
+          "description": "Country or territory.",
+          "examples": ["Colombia", "Palestine"]
+        },
+        "department": {
+          "type": "string",
+          "description": "Department, state, or governorate."
+        },
+        "municipality": {
+          "type": "string",
+          "description": "Municipality, city, or district."
+        },
+        "village": {
+          "type": "string",
+          "description": "Vereda, corregimiento, neighborhood, or specific location."
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Narrative description of the event in 2-5 sentences. What happened, who was affected, who is responsible."
+    },
+    "victims": {
+      "type": "object",
+      "properties": {
+        "dead": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "injured": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "displaced": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "affectedCommunities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of affected communities, ethnic groups, or populations."
+        },
+        "victimCategories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Children",
+              "Women",
+              "Elderly",
+              "Indigenous",
+              "Afro-descendant",
+              "Peasant",
+              "Human rights defender",
+              "Social leader",
+              "Journalist",
+              "Medical personnel",
+              "Ex-combatant",
+              "LGBTIQ+",
+              "Migrant",
+              "Person with disability"
+            ]
+          }
+        }
+      }
+    },
+    "perpetrators": {
+      "type": "object",
+      "properties": {
+        "actorType": {
+          "type": "string",
+          "description": "Type of armed actor alleged responsible.",
+          "enum": [
+            "State armed forces",
+            "Paramilitary group",
+            "Guerrilla group",
+            "Post-demobilization armed group",
+            "Criminal organization",
+            "Settlers",
+            "Private security",
+            "Unknown armed group",
+            "Multiple actors"
+          ]
+        },
+        "allegedGroup": {
+          "type": "string",
+          "description": "Name of the specific group or institution allegedly responsible."
+        },
+        "allegiance": {
+          "type": "string",
+          "enum": ["State", "Non-state", "Unknown"]
+        }
+      }
+    },
+    "ihlViolations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Specific IHL principles or rules violated."
+      },
+      "examples": [
+        "Principle of distinction",
+        "Principle of proportionality",
+        "Principle of precaution",
+        "Protection of civilians",
+        "Protection of medical personnel and facilities",
+        "Prohibition of collective punishment",
+        "Prohibition of torture",
+        "Prohibition of sexual violence"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["medium"],
+        "properties": {
+          "medium": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "date": { "type": "string" }
+        }
+      }
+    },
+    "context": {
+      "type": "string",
+      "description": "Broader context: ongoing armed conflict, military operation, protest, post-ceasefire, etc."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "AI confidence level based on source quality and information completeness."
+    }
+  }
+}
