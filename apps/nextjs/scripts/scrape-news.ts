@@ -15,7 +15,7 @@ const RSS_FEEDS: FeedConfig[] = [
   { url: 'https://www.hrw.org/feed/feed/rss/americas', medium: 'HRW', region: 'Colombia' },
 ]
 
-const START_DATE = new Date('2026-07-01')
+const START_DATE = new Date('2025-07-01')
 const END_DATE = new Date() // present
 
 interface Article {
