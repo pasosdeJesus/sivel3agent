@@ -2,6 +2,8 @@ import Parser from 'rss-parser'
 import { parse as parseHTML } from 'node-html-parser'
 import { createHash } from 'crypto'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
+import { classifyByKeywords } from '../lib/classifyByKeywords'
+import { classifyNewsLLM } from '../lib/classifyNewsLLM'
 
 interface FeedConfig {
   url: string
@@ -15,10 +17,13 @@ const RSS_FEEDS: FeedConfig[] = [
   { url: 'https://www.hrw.org/rss/news', medium: 'HRW', region: 'Colombia' },
   { url: 'https://reliefweb.int/updates/rss.xml?search=primary_country.iso3:PSE', medium: 'ReliefWeb', region: 'Palestine' },
   { url: 'https://miputumayo.com.co/feed/', medium: 'MiPutumayo Noticias', region: 'Putumayo' },
+  { url: 'https://verdadabierta.com/feed/', medium: 'Verdad Abierta', region: 'Colombia' },
+  { url: 'https://www.justiciaypazcolombia.com/feed/', medium: 'Comisión Intereclesial', region: 'Colombia' },
+  { url: 'https://prensarural.org/spip/spip.php?page=backend', medium: 'Prensa Rural', region: 'Colombia' },
 ]
 
 const START_DATE = new Date('2025-07-01')
-const END_DATE = new Date() // present
+const END_DATE = new Date()
 
 interface Article {
   url: string
@@ -43,7 +48,13 @@ async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
       continue
     }
 
-    const rawContent = item.content || item.description || ''
+    // WordPress/SPIP: content:encoded is exposed as content by rss-parser
+    const rawContent =
+      (item as Record<string, unknown>)['content:encoded'] as string ||
+      item.content ||
+      item.description ||
+      ''
+
     const cleanText = cleanHTML(rawContent)
     const contentHash = createHash('sha256').update(cleanText).digest('hex')
 
@@ -63,13 +74,16 @@ async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
 
 function cleanHTML(html: string): string {
   const root = parseHTML(html)
-  root.querySelectorAll('script, style').forEach(el => el.remove())
+  root.querySelectorAll('script, style, nav, footer, .comments').forEach((el) => el.remove())
   let text = root.textContent || ''
   text = text.replace(/\s+/g, ' ').trim()
   return text
 }
 
-async function saveArticle(article: Article, region: string): Promise<number | null> {
+async function saveAndClassify(
+  article: Article,
+  region: string,
+): Promise<{ id: number | null; isRelevant: boolean | null }> {
   const db = newKyselyPostgresql()
 
   const existing = await db
@@ -79,8 +93,8 @@ async function saveArticle(article: Article, region: string): Promise<number | n
     .executeTakeFirst()
 
   if (existing) {
-    console.log(`Skipping duplicate (URL): ${article.url}`)
-    return null
+    console.log(`  ⏭️  Skip (URL exists): ${article.title.slice(0, 80)}`)
+    return { id: null, isRelevant: null }
   }
 
   const hashExisting = await db
@@ -90,8 +104,29 @@ async function saveArticle(article: Article, region: string): Promise<number | n
     .executeTakeFirst()
 
   if (hashExisting) {
-    console.log(`Skipping duplicate (hash): ${article.url}`)
-    return null
+    console.log(`  ⏭️  Skip (hash exists): ${article.title.slice(0, 80)}`)
+    return { id: null, isRelevant: null }
+  }
+
+  // Classify with keywords first
+  const kw = classifyByKeywords(article.cleanText, article.title)
+
+  let isRelevant: boolean
+  let reason: string
+
+  if (kw.confidence === 'high') {
+    isRelevant = kw.relevant
+    reason = `[kw] ${kw.reason}`
+  } else {
+    try {
+      const llm = await classifyNewsLLM(article.cleanText, article.title)
+      isRelevant = llm.relevant
+      reason = `[llm] ${llm.reason}`
+    } catch (err) {
+      console.warn(`  ⚠️  LLM classify failed, using keyword fallback: ${err}`)
+      isRelevant = kw.relevant
+      reason = `[kw-fallback] ${kw.reason}`
+    }
   }
 
   const result = await db
@@ -105,32 +140,43 @@ async function saveArticle(article: Article, region: string): Promise<number | n
       raw_content: article.rawContent,
       clean_text: article.cleanText,
       metadata: { region },
+      is_relevant: isRelevant,
+      classification_reason: reason,
     })
     .returning('id')
     .executeTakeFirst()
 
-  console.log(`Inserted: ${article.title} (ID: ${result?.id})`)
-  return result?.id || null
+  const icon = isRelevant ? '✅' : '❌'
+  console.log(`  ${icon} ${article.title.slice(0, 80)} → ${reason}`)
+
+  return { id: result?.id || null, isRelevant }
 }
 
 async function scrapeAllFeeds() {
-  console.log(`Starting scrape (${START_DATE.toISOString()} to ${END_DATE.toISOString()})`)
+  console.log(`Starting scrape (${START_DATE.toISOString()} to ${END_DATE.toISOString()})\n`)
+
+  let totalStored = 0
+  let totalRelevant = 0
 
   for (const feed of RSS_FEEDS) {
-    console.log(`Fetching ${feed.url}...`)
+    console.log(`📡 ${feed.medium} (${feed.region})`)
     try {
       const articles = await fetchRSSFeed(feed)
-      console.log(`Found ${articles.length} articles in date range`)
+      console.log(`   ${articles.length} articles in date range`)
 
       for (const article of articles) {
-        await saveArticle(article, feed.region)
+        const result = await saveAndClassify(article, feed.region)
+        if (result.id !== null) {
+          totalStored++
+          if (result.isRelevant) totalRelevant++
+        }
       }
     } catch (error) {
-      console.error(`Error fetching ${feed.url}:`, error)
+      console.error(`   ❌ Error:`, error)
     }
   }
 
-  console.log('Scrape completed.')
+  console.log(`\n✅ Done. Stored: ${totalStored}, Relevant: ${totalRelevant}`)
 }
 
 const isMain = process.argv[1]?.includes('scrape-news')
@@ -143,4 +189,4 @@ if (isMain) {
     })
 }
 
-export { scrapeAllFeeds, fetchRSSFeed, cleanHTML, saveArticle }
+export { scrapeAllFeeds, fetchRSSFeed, cleanHTML, saveAndClassify }

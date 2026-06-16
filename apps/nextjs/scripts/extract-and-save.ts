@@ -10,6 +10,7 @@ async function extractAndSave() {
     .leftJoin('pre_alert_source', 'source.id', 'pre_alert_source.source_id')
     .where('pre_alert_source.pre_alert_id', 'is', null)
     .where('clean_text', 'is not', null)
+    .where('is_relevant', '=', true)
     .limit(10)
     .execute()
 
