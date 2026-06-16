@@ -58,44 +58,76 @@ export async function extractPreAlert(
 
 function buildExtractionPrompt(news: News): string {
   return `
-Eres un experto del Banco de Datos del CINEP. Convierte esta noticia en un relato JSON.
-Solo incluye datos explícitos del texto. NO inventes.
+Eres un documentador del Banco de Datos del CINEP (Noche y Niebla).
+Tu tarea es convertir esta noticia en un relato JSON siguiendo la metodología.
 
-CLASIFICACIÓN DEL HECHO (elige el código más preciso):
-DDHH-Persecución: A10:Ejecución Extrajudicial, A11:Desaparición Forzada, A12:Tortura,
+## Metodología de documentación
+
+### Extracción de información (9 preguntas)
+Responde en el JSON lo que el texto permita:
+- ¿QUÉ? El hecho ocurrido
+- ¿QUIÉN? El presunto responsable
+- ¿CONTRA QUIÉN? La víctima (quién era, sector social)
+- ¿CÓMO? Métodos, armas, modo
+- ¿CUÁNDO? Fecha y hora
+- ¿DÓNDE? Departamento, municipio, vereda
+- COYUNTURA: Contexto regional, actores armados
+- ¿POR QUÉ? Móviles
+- LA OTRA VERSIÓN: Versiones contradictorias si las hay
+
+### Clasificación del hecho
+La categoría depende del TIPO DE AUTOR:
+- Autor ESTATAL o PARAESTATAL (Ejército, Policía, paramilitares) → DD.HH. (códigos A)
+- Autor NO ESTATAL con móvil POLÍTICO (guerrilla, disidencias) → VPS (códigos B)
+- En medio de ACCIÓN BÉLICA (combates, bombardeos) → Acción Bélica (códigos C)
+- En medio de CONFLICTO ARMADO con infracciones al DIH → DIHC (códigos D)
+
+Códigos principales (elige el más preciso):
+DDHH: A10:Ejecución Extrajudicial, A11:Desaparición Forzada, A12:Tortura,
   A13:Lesión Física, A14:Detención Arbitraria, A15:Amenaza Individual,
   A18:Amenaza Colectiva, A102:Desplazamiento Forzado Colectivo, A104:Confinamiento
-VPS-Persecución: B40:Asesinato Político, B41:Secuestro, B45:Amenaza Individual,
-  B401:Desplazamiento Forzado
+VPS: B40:Asesinato Político, B41:Secuestro, B45:Amenaza Individual,
+  B49:Amenaza Colectiva, B401:Desplazamiento Forzado Colectivo
 Acción Bélica: C62:Combate, C65:Bombardeo, C66:Bloqueo de Vías, C68:Incursión
 DIHC: D90:Ataque Indiscriminado, D701:Homicidio Persona Protegida,
-  D703:Muerte Civil en Acción Bélica, D72:Tortura Instrumento de Guerra,
-  D75:Reclutamiento Menores, D903:Desplazamiento Forzado Instrumento de Guerra
+  D703:Muerte Civil en Acción Bélica, D903:Desplazamiento Forzado como Instrumento de Guerra
 
-CONTEXTO (elige 1-2): CONFLICTO ARMADO, ACCIONES BÉLICAS, PARAMILITARIZACIÓN,
-  PRESENCIA GUERRILLERA, PERSECUCIÓN A ORGANIZACIÓN, MILITARIZACIÓN,
-  PROTESTA, MANIFESTACIONES, ABUSO POLICIAL, PARO ARMADO
+### Redacción del memo (campo "hechos")
+- Comenzar con QUIÉN + QUÉ + A QUIÉN (ej: "Paramilitares ejecutaron a...")
+- Verbos en tiempo pasado: ejecutaron, asesinaron, desplazaron, amenazaron
+- NO usar regionalismos ni expresiones calificativas
+- NO usar "dieron de baja" ni términos militares coloquiales
+- Orden: responsable → acción → víctima → circunstancias → coyuntura
+- Citas textuales entre comillas
 
-OCUPACIÓN VÍCTIMA: CAMPESINO, INDIGENA, LIDER(ESA) SOCIAL, DEFENSOR/A DE DDHH,
-  SINDICALISTA, PERIODISTA, MENOR DE EDAD, COMERCIANTE, SOLDADO, POLICÍA,
-  EXCOMBATIENTE, DESPLAZADO, SIN INFORMACIÓN
+### Tesauro de contextos
+CONFLICTO ARMADO, ACCIONES BÉLICAS, PARAMILITARIZACIÓN, PRESENCIA GUERRILLERA,
+PERSECUCIÓN A ORGANIZACIÓN, MILITARIZACIÓN, CULTIVOS DE USO ILÍCITO,
+PROTESTA, MANIFESTACIONES, ENCLAVES ECONÓMICOS, CAMPAÑAS DE INTOLERANCIA,
+DESALOJOS, ABUSO POLICIAL, PARO ARMADO, PROCESOS ELECTORALES
 
-Responde SOLO este JSON (sin explicaciones, sin markdown, sin comillas en null):
+### Ocupación de víctimas
+CAMPESINO, INDIGENA, LIDER(ESA) SOCIAL, DEFENSOR/A DE DDHH, SINDICALISTA,
+PERIODISTA, MENOR DE EDAD, COMERCIANTE, ABOGADO/A, EXCONCEJAL, ALCALDE,
+SOLDADO, POLICÍA, EXCOMBATIENTE, DESPLAZADO, SERVIDOR PÚBLICO, SIN INFORMACIÓN
+
+Responde SOLO este JSON (sin explicaciones, sin markdown):
 {
   "relatos": [{
-    "titulo": "máx 50 chars",
-    "hechos": "3-6 oraciones: qué pasó, quiénes, dónde, cuándo",
+    "titulo": "máx 50 chars, describe el hecho",
+    "hechos": "responsable + acción + víctima + circunstancias en tiempo pasado. Citas textuales entre comillas.",
     "fecha": "YYYY-MM-DD",
     "departamento": "departamento o null",
     "municipio": "municipio o null",
-    "agresion_particular": "CÓDIGO EXACTO de la lista de clasificación (ej: B40: ASESINATO POLÍTICO (VPS - Persecución Política))",
-    "contextos": ["Uno o dos de la lista de CONTEXTO"],
+    "centro_poblado": "vereda/corregimiento/barrio o null",
+    "agresion_particular": "CÓDIGO EXACTO de la lista. Ej: B40: ASESINATO POLÍTICO (VPS - Persecución Política)",
+    "contextos": ["uno o dos del tesauro de contextos"],
     "victimas": [{
-      "ocupacion": "OCUPACIÓN de la lista",
+      "ocupacion": "ocupación del tesauro",
       "estado": "muerto, herido, desaparecido, desplazado, amenazado"
     }],
-    "grupos": [{"nombre_grupo": "NOMBRE EN MAYÚSCULAS"}],
-    "presuntos_responsables_individuales": [{"nombre": "NOMBRE EN MAYÚSCULAS"}],
+    "grupos": [{"nombre_grupo": "NOMBRE EN MAYÚSCULAS del grupo armado responsable"}],
+    "presuntos_responsables_individuales": [{"nombre": "NOMBRE EN MAYÚSCULAS si se menciona"}],
     "cantidad": {"muertos": N, "heridos": N, "desplazados": N},
     "fuentes": [{"nombre_fuente": "${news.sourceMedium}", "fecha": "${news.date}", "ubicacion": "${news.sourceUrl}"}]
   }]
@@ -103,7 +135,7 @@ Responde SOLO este JSON (sin explicaciones, sin markdown, sin comillas en null):
 
 Noticia (${news.sourceMedium}, ${news.date}):
 Título: ${news.title}
-${news.text}
+${news.text.slice(0, 6000)}
   `
 }
 
