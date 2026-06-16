@@ -1,0 +1,735 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sivel.xyz/schemas/relato.schema.json",
+  "title": "Relato de Violencia Política",
+  "description": "Esquema JSON equivalente al DTD relatos-099.dtd del Banco de Datos del CINEP. Incluye tesauros completos del marco conceptual y reglas de formato del SKILL.",
+  "type": "object",
+  "properties": {
+    "relatos": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relato" },
+      "minItems": 1
+    }
+  },
+  "required": ["relatos"],
+  "$defs": {
+    "mayusculas": {
+      "type": "string",
+      "pattern": "^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]*$"
+    },
+    "fecha_valida": {
+      "type": "string",
+      "pattern": "^\\d{4}-(\\d{2}|00)-(\\d{2}|00)$"
+    },
+    "relato": {
+      "type": "object",
+      "properties": {
+        "organizacion_responsable": { 
+          "type": "string",
+          "const": "Banco de Datos del CINEP"
+        },
+        "derechos": { 
+          "type": "string",
+          "const": "Creative Commons Atribución 2.5 Colombia"
+        },
+        "id_relato": { 
+          "type": "string",
+          "readOnly": true
+        },
+        "forma_compartir": { 
+          "type": "string",
+          "enum": ["publico", "privado", "restringido"]
+        },
+        "titulo": { 
+          "type": ["string", "null"],
+          "maxLength": 50
+        },
+        "hechos": { 
+          "type": "string"
+        },
+        "personas": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/persona" }
+        },
+        "grupos": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/grupo" }
+        },
+        "victimas": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/victima" }
+        },
+        "presuntos_responsables_individuales": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/presunto_responsable_individual" }
+        },
+        "fecha": { 
+          "type": ["string", "null"],
+          "$ref": "#/$defs/fecha_valida"
+        },
+        "hora": { 
+          "type": ["string", "null"],
+          "pattern": "^(0[0-9]|1[0-2]):[0-5][0-9] (AM|PM)$"
+        },
+        "duracion": { "type": ["string", "null"] },
+        "ubicaciones_secundarias": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ubicacion_secundaria" }
+        },
+        "departamento": { 
+          "type": ["string", "null"],
+          "enum": [
+            "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bogotá D.C.",
+            "Bolívar", "Boyacá", "Caldas", "Caquetá", "Casanare", "Cauca",
+            "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
+            "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander",
+            "Putumayo", "Quindío", "Risaralda", "San Andrés y Providencia",
+            "Santander", "Sucre", "Tolima", "Valle del Cauca", "Vaupés", "Vichada",
+            null
+          ]
+        },
+        "municipio": { "type": ["string", "null"] },
+        "centro_poblado": { "type": ["string", "null"] },
+        "longitud": { "type": ["string", "null"] },
+        "latitud": { "type": ["string", "null"] },
+        "actos": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/acto" }
+        },
+        "contextos": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/contexto_valor" }
+        },
+        "fuentes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fuente" }
+        },
+        "acciones_juridicas": {
+          "type": ["object", "null"],
+          "properties": {
+            "observaciones": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/observacion" }
+            }
+          }
+        },
+        "otras_acciones": { "type": ["string", "null"] },
+        "fecha_publicacion": { 
+          "type": ["string", "null"],
+          "readOnly": true,
+          "format": "date-time"
+        },
+        "anexo": {
+          "type": ["object", "null"],
+          "properties": {
+            "observaciones": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/observacion" }
+            }
+          }
+        },
+        "combatientes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/combatiente" }
+        },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      },
+      "required": ["organizacion_responsable", "derechos", "id_relato", "forma_compartir", "hechos"]
+    },
+    "persona": {
+      "type": "object",
+      "properties": {
+        "id_persona": { "type": "string" },
+        "nombre": { "$ref": "#/$defs/mayusculas" },
+        "nombre2": { "$ref": "#/$defs/mayusculas" },
+        "apellido": { "$ref": "#/$defs/mayusculas" },
+        "apellido2": { "$ref": "#/$defs/mayusculas" },
+        "docid": { "type": ["string", "null"] },
+        "fecha_nacimiento": { 
+          "type": ["string", "null"],
+          "$ref": "#/$defs/fecha_valida"
+        },
+        "sexo": { 
+          "type": ["string", "null"],
+          "enum": ["M", "F", null]
+        },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      },
+      "required": ["id_persona"]
+    },
+    "grupo": {
+      "type": "object",
+      "properties": {
+        "id_grupo": { 
+          "type": ["string", "null"],
+          "enum": ["4", "5", "6", "7", "14", "25", "35", "38", "51", null]
+        },
+        "nombre_grupo": { "$ref": "#/$defs/mayusculas" },
+        "sigla": { "type": ["string", "null"] },
+        "subgrupo_de": { "type": ["string", "null"] },
+        "agresion_sin_vicd": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      }
+    },
+    "victima": {
+      "type": "object",
+      "properties": {
+        "id_persona": { "type": "string" },
+        "ocupacion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "DEFENSOR/A DE DDHH",
+            "LIDER(ESA) SOCIAL",
+            "CAMPESINO",
+            "INDIGENA",
+            "COMERCIANTE",
+            "OBRERO",
+            "PROFESIONAL",
+            "DESEMPLEADO (A)",
+            "SIN INFORMACIÓN",
+            null
+          ]
+        },
+        "sector_condicion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "AMBIENTALISTA",
+            "CAMPESINO",
+            "COLONOS",
+            "COMERCIANTE",
+            "DESEMPLEADO (A)",
+            "DESMOVILIZADO(A)",
+            "EMPLEADO",
+            "EMPRESARIO",
+            "ESTILISTA",
+            "ETNIAS - NEGRITUDES",
+            "EXCOMBATIENTES",
+            "GANADERO",
+            "HACENDADO",
+            "IGLESIAS",
+            "INDIGENA",
+            "INDUSTRIAL",
+            "LGBT",
+            "LIDER(ESA) SOCIAL",
+            "MARGINADO",
+            "MINERO",
+            "OBRERO",
+            "PROFESIONAL",
+            "SIN INFORMACIÓN",
+            "TRABAJADOR (A) SEXUAL",
+            "TRABAJADOR INDEPENDIENTE",
+            "TRANSPORTADOR",
+            "VENDEDOR AMBULANTE",
+            "VÍCTIMA",
+            null
+          ]
+        },
+        "iglesia": { "type": ["string", "null"] },
+        "organizacion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "AMBIENTALISTA",
+            "CAMPESINA",
+            "CIVICA",
+            "COMUNAL",
+            "DERECHOS HUMANOS",
+            "DESPLAZADOS",
+            "ESTUDIANTIL",
+            "FEMENINA",
+            "GREMIAL",
+            "HUMANITARIA",
+            "INDIGENA",
+            "JUVENIL",
+            "LGTB",
+            "NEGRITUDES",
+            "PAZ",
+            "PROFESIONAL",
+            "RELIGIOSA",
+            "SIN INFORMACIÓN",
+            "SINDICAL",
+            "VÍCTIMAS",
+            null
+          ]
+        },
+        "id_grupo": { 
+          "type": ["string", "null"],
+          "enum": ["4", "5", "6", "7", "14", "25", "35", null]
+        },
+        "estado_tras_hecho": { "type": ["string", "null"] },
+        "danio_directo": { "type": ["string", "null"] },
+        "danio_indirecto": { "type": ["string", "null"] },
+        "personas_dependientes": { "type": ["string", "null"] },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      },
+      "required": ["id_persona"]
+    },
+    "presunto_responsable_individual": {
+      "type": "object",
+      "properties": {
+        "id_persona": { "type": "string" },
+        "id_grupo": { 
+          "type": ["string", "null"],
+          "enum": ["4", "5", "6", "7", "14", "25", "35", null]
+        },
+        "alias": { "type": ["string", "null"] },
+        "agresion_sin_vicd": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      },
+      "required": ["id_persona"]
+    },
+    "acto": {
+      "type": "object",
+      "properties": {
+        "agresion": { 
+          "type": "string",
+          "enum": ["VIDA", "INTEGRIDAD", "LIBERTAD"]
+        },
+        "agresion_particular": { 
+          "type": ["string", "null"],
+          "enum": [
+            "A10: EJECUCIÓN EXTRAJUDICIAL (DD.HH. - Persecución Política)",
+            "A16: ATENTADO (DD.HH. - Persecución Política)",
+            "A15: AMENAZA INDIVIDUAL (DD.HH. - Persecución Política)",
+            "A18: AMENAZA COLECTIVA (DD.HH. - Persecución Política)",
+            "A12: TORTURA (DD.HH. - Persecución Política)",
+            "A13: LESIÓN FÍSICA (DD.HH. - Persecución Política)",
+            "A17: COLECTIVO LESIONADO (DD.HH. - Persecución Política)",
+            "A19: VIOLENCIA SEXUAL (DD.HH. - Persecución Política)",
+            "A191: VIOLACIÓN (DD.HH. - Persecución Política)",
+            "A192: EMBARAZO FORZADO (DD.HH. - Persecución Política)",
+            "A193: PROSTITUCIÓN FORZADA (DD.HH. - Persecución Política)",
+            "A194: ESTERILIZACIÓN FORZADA (DD.HH. - Persecución Política)",
+            "A195: ESCLAVITUD SEXUAL (DD.HH. - Persecución Política)",
+            "A196: ABUSO SEXUAL (DD.HH. - Persecución Política)",
+            "A197: ABORTO FORZADO (DD.HH. - Persecución Política)",
+            "A11: DESAPARICIÓN FORZADA (DD.HH. - Persecución Política)",
+            "A14: DETENCIÓN ARBITRARIA (DD.HH. - Persecución Política)",
+            "A141: JUDICIALIZACIÓN ARBITRARIA (DD.HH. - Persecución Política)",
+            "A101: DEPORTACIÓN (DD.HH. - Persecución Política)",
+            "A102: DESPLAZAMIENTO FORZADO COLECTIVO (DD.HH. - Persecución Política)",
+            "A104: CONFINAMIENTO (DD.HH. - Persecución Política)",
+            "A20: EJECUCIÓN EXTRAJUDICIAL (DD.HH. - Abuso de Autoridad)",
+            "A26: ATENTADO (DD.HH. - Abuso de Autoridad)",
+            "A25: AMENAZA INDIVIDUAL (DD.HH. - Abuso de Autoridad)",
+            "A28: AMENAZA COLECTIVA (DD.HH. - Abuso de Autoridad)",
+            "A22: TORTURA (DD.HH. - Abuso de Autoridad)",
+            "A23: LESIÓN FÍSICA (DD.HH. - Abuso de Autoridad)",
+            "A231: COLECTIVO LESIONADO (DD.HH. - Abuso de Autoridad)",
+            "A29: VIOLENCIA SEXUAL (DD.HH. - Abuso de Autoridad)",
+            "A291: VIOLACIÓN (DD.HH. - Abuso de Autoridad)",
+            "A292: EMBARAZO FORZADO (DD.HH. - Abuso de Autoridad)",
+            "A293: PROSTITUCIÓN FORZADA (DD.HH. - Abuso de Autoridad)",
+            "A294: ESTERILIZACIÓN FORZADA (DD.HH. - Abuso de Autoridad)",
+            "A295: ESCLAVITUD SEXUAL (DD.HH. - Abuso de Autoridad)",
+            "A296: ABUSO SEXUAL (DD.HH. - Abuso de Autoridad)",
+            "A297: ABORTO FORZADO (DD.HH. - Abuso de Autoridad)",
+            "A21: DESAPARICIÓN FORZADA (DD.HH. - Abuso de Autoridad)",
+            "A24: DETENCIÓN ARBITRARIA (DD.HH. - Abuso de Autoridad)",
+            "A241: JUDICIALIZACIÓN ARBITRARIA (DD.HH. - Abuso de Autoridad)",
+            "A27: DESPLAZAMIENTO FORZADO COLECTIVO (DD.HH. - Abuso de Autoridad)",
+            "A30: EJECUCIÓN EXTRAJUDICIAL (DD.HH. - Intolerancia Social)",
+            "A37: ATENTADO (DD.HH. - Intolerancia Social)",
+            "A35: AMENAZA INDIVIDUAL (DD.HH. - Intolerancia Social)",
+            "A38: AMENAZA COLECTIVA (DD.HH. - Intolerancia Social)",
+            "A36: TORTURA (DD.HH. - Intolerancia Social)",
+            "A33: LESIÓN FÍSICA (DD.HH. - Intolerancia Social)",
+            "A331: COLECTIVO LESIONADO (DD.HH. - Intolerancia Social)",
+            "A39: VIOLENCIA SEXUAL (DD.HH. - Intolerancia Social)",
+            "A391: VIOLACIÓN (DD.HH. - Intolerancia Social)",
+            "A392: EMBARAZO FORZADO (DD.HH. - Intolerancia Social)",
+            "A393: PROSTITUCIÓN FORZADA (DD.HH. - Intolerancia Social)",
+            "A394: ESTERILIZACIÓN FORZADA (DD.HH. - Intolerancia Social)",
+            "A395: ESCLAVITUD FORZADA (DD.HH. - Intolerancia Social)",
+            "A396: ABUSO SEXUAL (DD.HH. - Intolerancia Social)",
+            "A397: ABORTO FORZADO (DD.HH. - Intolerancia Social)",
+            "A302: DESAPARICIÓN FORZADA (DD.HH. - Intolerancia Social)",
+            "A301: DETENCIÓN ARBITRARIA (DD.HH. - Intolerancia Social)",
+            "A341: JUDICIALIZACIÓN ARBITRARIA (DD.HH. - Intolerancia Social)",
+            "A34: DESPLAZAMIENTO FORZADO (DD.HH. - Intolerancia Social)",
+            "B40: ASESINATO POLÍTICO (VPS - Persecución Política)",
+            "B46: ATENTADO (VPS - Persecución Política)",
+            "B45: AMENAZA INDIVIDUAL (VPS - Persecución Política)",
+            "B49: AMENAZA COLECTIVA (VPS - Persecución Política)",
+            "B47: TORTURA (VPS - Persecución Política)",
+            "B43: LESIÓN FÍSICA (VPS - Persecución Política)",
+            "B402: COLECTIVO LESIONADO (VPS - Persecución Política)",
+            "B420: VIOLENCIA SEXUAL (VPS - Persecución Política)",
+            "B41: SECUESTRO POR INSURGENCIA (VPS - Persecución Política)",
+            "B48: RAPTO POR MÓVILES POLÍTICOS (VPS - Persecución Política)",
+            "B401: DESPLAZAMIENTO FORZADO COLECTIVO (VPS - Persecución Política)",
+            "B50: ASESINATO POR INTOLERANCIA SOCIAL (VPS - Intolerancia Social)",
+            "B57: ATENTADO POR INTOLERANCIA SOCIAL (VPS - Intolerancia Social)",
+            "B55: AMENAZA INDIVIDUAL (VPS - Intolerancia Social)",
+            "B59: AMENAZA COLECTIVA (VPS - Intolerancia Social)",
+            "B56: TORTURA (VPS - Intolerancia Social)",
+            "B53: LESIÓN FÍSICA (VPS - Intolerancia Social)",
+            "B502: COLECTIVO LESIONADO (VPS - Intolerancia Social)",
+            "B520: VIOLENCIA SEXUAL (VPS - Intolerancia Social)",
+            "B58: RAPTO POR INTOLERANCIA SOCIAL (VPS - Intolerancia Social)",
+            "B501: DESPLAZAMIENTO COLECTIVO (VPS - Intolerancia Social)",
+            "D90: ATAQUE INDISCRIMINADO (DIHC - Atacar Objetivos Ilícitos)",
+            "D707: ATACAR O IMPEDIR MISIÓN MÉDICA O SANITARIA (DIHC - Atacar Objetivos Ilícitos)",
+            "D708: ATACAR O IMPEDIR MISIÓN RELIGIOSA (DIHC - Atacar Objetivos Ilícitos)",
+            "D709: ATACAR O IMPEDIR MISIÓN HUMANITARIA (DIHC - Atacar Objetivos Ilícitos)",
+            "D710: ATACAR O IMPEDIR MISIONES DE PAZ (DIHC - Atacar Objetivos Ilícitos)",
+            "D711: ATACAR O IMPEDIR MISIÓN INFORMATIVA (DIHC - Atacar Objetivos Ilícitos)",
+            "D712: ATAQUE A ZONAS HUMANITARIAS (DIHC - Atacar Objetivos Ilícitos)",
+            "D85: ATAQUE A BIENES CULTURALES (DIHC - Atacar Objetivos Ilícitos)",
+            "D801: ATAQUE A OBRAS CON FUERZAS PELIGROSAS (DIHC - Atacar Objetivos Ilícitos)",
+            "D84: ATAQUE AL MEDIO AMBIENTE NATURAL (DIHC - Atacar Objetivos Ilícitos)",
+            "D905: GUERRA SIN CUARTEL (DIHC - Empleo de Métodos Ilícitos)",
+            "D95: PILLAJE (DIHC - Empleo de Métodos Ilícitos)",
+            "D86: HAMBRE COMO MÉTODO DE GUERRA (DIHC - Empleo de Métodos Ilícitos)",
+            "D91: PERFIDIA (DIHC - Empleo de Métodos Ilícitos)",
+            "D713: IMPEDIR CONVERSACIONES DE PAZ (DIHC - Empleo de Métodos Ilícitos)",
+            "D92: ARMAS ABSOLUTAMENTE PROHIBIDAS (DIHC - Empleo de Medios Ilícitos)",
+            "D93: ARMAS DE USO RESTRINGIDO (DIHC - Empleo de Medios Ilícitos)",
+            "D701: HOMICIDIO INTENCIONAL DE PERSONA PROTEGIDA (DIHC - Trato Afrentoso)",
+            "D97: MUERTE POR EMPLEO DE MÉTODOS Y MEDIOS ILÍCITOS (DIHC - Trato Afrentoso)",
+            "D87: MUERTE POR ATAQUE A BIENES CIVILES (DIHC - Trato Afrentoso)",
+            "D703: MUERTE DE CIVIL EN ACCIÓN BÉLICA (DIHC - Trato Afrentoso)",
+            "D702: LESIONES INTENCIONALES A PERSONA PROTEGIDA (DIHC - Trato Afrentoso)",
+            "D98: LESIONES POR MÉTODOS O MEDIOS ILÍCITOS (DIHC - Trato Afrentoso)",
+            "D88: LESIONES POR ATAQUE A BIENES CIVILES (DIHC - Trato Afrentoso)",
+            "D704: LESIONES A CIVILES EN ACCIÓN BÉLICA (DIHC - Trato Afrentoso)",
+            "D705: COLECTIVO LESIONADO POR INFRACCIONES AL DIHC (DIHC - Trato Afrentoso)",
+            "D72: TORTURA Y TRATOS CRUELES COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D77: VIOLENCIA SEXUAL COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D714: ESCLAVITUD Y TRABAJOS FORZADOS COMO INSTRUMENTOS DE GUERRA (DIHC - Trato Afrentoso)",
+            "D74: TOMA DE REHENES COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D78: USO DE ESCUDOS HUMANOS (INDIVIDUAL) (DIHC - Trato Afrentoso)",
+            "D904: USO DE ESCUDOS HUMANOS (COLECTIVO) (DIHC - Trato Afrentoso)",
+            "D76: DESAPARICIÓN FORZADA COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D15: JUDICIALIZACIÓN ARBITRARIA COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D903: DESPLAZAMIENTO FORZADO COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D906: CONFINAMIENTO DE POBLACIONES COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D75: RECLUTAMIENTO DE MENORES Y SU UTILIZACIÓN EN LA GUERRA (DIHC - Trato Afrentoso)",
+            "D716: DESCONOCIMIENTO DE DERECHOS A PRISIONEROS DE GUERRA (DIHC - Trato Afrentoso)",
+            "D717: NEGACIÓN DE ATENCIÓN Y CUIDADOS A PERSONAS VULNERABLES (DIHC - Trato Afrentoso)",
+            "D718: PROFANACIÓN Y OCULTAMIENTO DE CADÁVERES (DIHC - Trato Afrentoso)",
+            "D73: AMENAZA INDIVIDUAL COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "D706: AMENAZA COLECTIVA COMO INSTRUMENTO DE GUERRA (DIHC - Trato Afrentoso)",
+            "C62: COMBATE (Acción Bélica)",
+            "C63: EMBOSCADA (Acción Bélica)",
+            "C64: USO DE MINAS - CAMPO MINADO (Acción Bélica)",
+            "C65: BOMBARDEO - AMETRALLAMIENTO (Acción Bélica)",
+            "C66: BLOQUEO DE VÍAS (Acción Bélica)",
+            "C67: ATAQUE A OBJETIVO MILITAR (Acción Bélica)",
+            "C68: INCURSIÓN (Acción Bélica)",
+            "C69: SABOTAJE (Acción Bélica)",
+            null
+          ]
+        },
+        "id_victima_individual": { "type": ["string", "null"] },
+        "id_grupo_victima": { "type": ["string", "null"] },
+        "id_presunto_grupo_responsable": { 
+          "type": ["string", "null"],
+          "enum": ["4", "5", "6", "7", "14", "25", "35", null]
+        },
+        "id_presunto_responsable_individual": { "type": ["string", "null"] }
+      },
+      "required": ["agresion"],
+      "oneOf": [
+        { "required": ["id_victima_individual"] },
+        { "required": ["id_grupo_victima"] }
+      ],
+      "oneOf": [
+        { "required": ["id_presunto_grupo_responsable"] },
+        { "required": ["id_presunto_responsable_individual"] }
+      ]
+    },
+    "contexto_valor": {
+      "type": "string",
+      "enum": [
+        "ABUSO POLICIAL",
+        "ACCIONES BÉLICAS",
+        "CAMPAÑAS DE INTOLERANCIA",
+        "CONFLICTO ARMADO",
+        "CONFLICTOS ESTUDIANTILES",
+        "CONFLICTOS LABORALES",
+        "CULTIVOS DE USO ILÍCITO",
+        "DESALOJOS",
+        "ENCLAVES ECONÓMICOS",
+        "ERRADICACIÓN FORZADA",
+        "FALSO POSITIVO",
+        "MANIFESTACIONES",
+        "MARCHA CAMPESINA",
+        "MEGAPROYECTOS",
+        "MILITARIZACIÓN",
+        "MINERO ENERGETICO",
+        "OCUPACIONES",
+        "PARAMILITARIZACIÓN",
+        "PARO AGRARIO",
+        "PARO ARMADO",
+        "PARO CAMIONERO",
+        "PARO CÍVICO",
+        "PARO NACIONAL 28 DE ABRIL DE 2021",
+        "PERSECUCIÓN A IGLESIA",
+        "PERSECUCIÓN A ORGANIZACIÓN",
+        "PRESENCIA DE MILICIAS",
+        "PRESENCIA GUERRILLERA",
+        "PROBL. ÉTNICA (NEG.E IN.)",
+        "PROBLEMÁTICA AMBIENTAL",
+        "PROBLEMÁTICA CARCELARIA",
+        "PROBLEMÁTICA FRONTERIZA",
+        "PROCESO JUDICIAL",
+        "PROCESOS DE PAZ O DIÁLOGO",
+        "PROCESOS ELECTORALES",
+        "PROTESTA",
+        "RESTITUCIÓN DE TIERRAS",
+        "SEGURIDAD INFORMÁTICA",
+        "TOMA DE TIERRAS",
+        "ZONAS DE REHAB. Y CONSOL"
+      ]
+    },
+    "fuente": {
+      "type": "object",
+      "properties": {
+        "nombre_fuente": { "type": "string" },
+        "fecha_fuente": { 
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "ubicacion_fuente": { "type": ["string", "null"] },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      },
+      "required": ["nombre_fuente"]
+    },
+    "combatiente": {
+      "type": "object",
+      "properties": {
+        "nombre": { "$ref": "#/$defs/mayusculas" },
+        "alias": { "type": ["string", "null"] },
+        "edad": { "type": ["string", "null"] },
+        "sexo": { 
+          "type": ["string", "null"],
+          "enum": ["M", "F", null]
+        },
+        "ocupacion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "DEFENSOR/A DE DDHH",
+            "LIDER(ESA) SOCIAL",
+            "CAMPESINO",
+            "INDIGENA",
+            "COMERCIANTE",
+            "OBRERO",
+            "PROFESIONAL",
+            "DESEMPLEADO (A)",
+            "SIN INFORMACIÓN",
+            null
+          ]
+        },
+        "filiacion": { "type": ["string", "null"] },
+        "sector_condicion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "AMBIENTALISTA",
+            "CAMPESINO",
+            "LIDER(ESA) SOCIAL",
+            "SIN INFORMACIÓN",
+            null
+          ]
+        },
+        "organizacion": { 
+          "type": ["string", "null"],
+          "enum": [
+            "COMUNAL",
+            "DERECHOS HUMANOS",
+            "SINDICAL",
+            "SIN INFORMACIÓN",
+            null
+          ]
+        },
+        "organizacion_armada": { 
+          "type": ["string", "null"],
+          "enum": [
+            "EJÉRCITO",
+            "GUERRILLA",
+            "PARAMILITARES",
+            "SIN INFORMACIÓN",
+            null
+          ]
+        },
+        "resultado_agresion": { "type": ["string", "null"] },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      }
+    },
+    "ubicacion_secundaria": {
+      "type": "object",
+      "properties": {
+        "departamento": { 
+          "type": ["string", "null"],
+          "enum": [
+            "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bogotá D.C.",
+            "Bolívar", "Boyacá", "Caldas", "Caquetá", "Casanare", "Cauca",
+            "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
+            "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander",
+            "Putumayo", "Quindío", "Risaralda", "San Andrés y Providencia",
+            "Santander", "Sucre", "Tolima", "Valle del Cauca", "Vaupés", "Vichada",
+            null
+          ]
+        },
+        "municipio": { "type": ["string", "null"] },
+        "centro_poblado": { "type": ["string", "null"] },
+        "longitud": { "type": ["string", "null"] },
+        "latitud": { "type": ["string", "null"] },
+        "observaciones": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/observacion" }
+        }
+      }
+    },
+    "observacion": {
+      "type": "object",
+      "properties": {
+        "tipo": { 
+          "type": "string",
+          "enum": [
+            "intervalo",
+            "region",
+            "sitio",
+            "lugar",
+            "tsitio",
+            "contexto",
+            "etnia",
+            "subdivision",
+            "bloque",
+            "frente",
+            "otro",
+            "filiacion",
+            "orientacionsexual",
+            "vinculoestado",
+            "anotaciones",
+            "grinformacion",
+            "grconfiabilidad",
+            "gresclarecimiento",
+            "grimpunidad",
+            "bienes",
+            "frontera",
+            "organizacion_armada",
+            "rangoedad",
+            "hijos"
+          ]
+        },
+        "texto": { "type": "string" }
+      },
+      "required": ["tipo", "texto"],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "tipo": { "const": "intervalo" } }
+          },
+          "then": {
+            "properties": {
+              "texto": { 
+                "enum": ["MADRUGADA", "MAÑANA", "TARDE", "NOCHE", "SIN INFORMACIÓN"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "tipo": { "const": "tsitio" } }
+          },
+          "then": {
+            "properties": {
+              "texto": { "enum": ["RURAL", "URBANO"] }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "tipo": { "const": "orientacionsexual" } }
+          },
+          "then": {
+            "properties": {
+              "texto": { 
+                "enum": [
+                  "S",
+                  "LGBTI",
+                  "HOMOSEXUAL",
+                  "BISEXUAL",
+                  "TRANSGENERO",
+                  "LESBIANA",
+                  "GAY",
+                  "SIN INFORMACIÓN"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "tipo": { "const": "region" } }
+          },
+          "then": {
+            "properties": {
+              "texto": { 
+                "enum": [
+                  "AMAZONÍA",
+                  "ANTIOQUIA CHOCO SANT",
+                  "CENTRO",
+                  "COSTA ATLANTICA",
+                  "COSTA PACIFICA",
+                  "EJE CAFETERO Y TOLIMA GRANDE",
+                  "EXTERIOR",
+                  "LLANOS",
+                  "MAGDALENAMEDIOSURDECESARYSURDEBOLIVAR",
+                  "SUR OCCIDENTE",
+                  "SIN INFORMACIÓN"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "tipo": { "const": "etnia" } }
+          },
+          "then": {
+            "properties": {
+              "texto": { 
+                "enum": [
+                  "INDÍGENA",
+                  "AFROCOLOMBIANO",
+                  "ROM",
+                  "RAIZAL",
+                  "PALENQUERO",
+                  "SIN INFORMACIÓN"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
