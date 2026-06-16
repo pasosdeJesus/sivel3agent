@@ -101,7 +101,7 @@ Todos corren localmente en Ollama con ROCm 7.2.0 sobre la RX 9060 XT:
 
 2. **14B Instruct real no disponible.** La evaluación de 14B usó el mismo GGUF que Coder. Necesitamos descargar `Qwen2.5-14B-Instruct-GGUF` desde HuggingFace para una comparación justa.
 
-3. **Prompt no usa el SKILL completo.** El prompt actual es una versión simplificada de la metodología Noche y Niebla. El [SKILL de documentación](doc/SKILL-document.md) contiene reglas de clasificación más precisas que podrían mejorar los resultados significativamente.
+3. **Prompt SKILL no mejora sobre prompt simple.** Probamos reemplazar el prompt por una versión condensada del [SKILL de documentación](doc/SKILL-document.md) que incluye las reglas de clasificación por tipo de autor (estatal → A, no estatal político → B, conflicto armado → C/D). Los resultados fueron idénticos: el cuello de botella está en la capacidad del modelo 7B, no en el prompt.
 
 4. **Scraping de fuentes incompleto.** Algunos artículos scrapeados contienen ruido de navegación (headers, menús) que contamina el texto de entrada.
 
@@ -127,9 +127,11 @@ Todos corren localmente en Ollama con ROCm 7.2.0 sobre la RX 9060 XT:
 
 ## 7. Conclusión Preliminar
 
-**Qwen2.5-7B-Instruct (Q4_K_M) es el mejor modelo para el MVP de sivel3agent.** Con 71% de acierto en clasificación y 7.1 segundos por artículo, ofrece el mejor balance precisión/velocidad/VRAM. El modelo ya está en producción generando pre‑alertas desde fuentes RSS colombianas y palestinas.
+**Qwen2.5-7B-Instruct (Q4_K_M) es el mejor modelo disponible para el MVP de sivel3agent.** Con 71% de acierto en clasificación y 7.1 segundos por artículo, ofrece el mejor balance precisión/velocidad/VRAM. El modelo ya está en producción generando pre‑alertas desde fuentes RSS colombianas y palestinas.
 
-La incorporación del SKILL de documentación como prompt del sistema y la migración a vLLM con guided JSON deberían llevar la precisión por encima del 80%, acercándose a la calidad de un documentador humano junior.
+Probamos dos variantes de prompt (simple y basado en el SKILL de documentación Noche y Niebla) sin diferencia significativa, lo que sugiere que el límite está en la capacidad del modelo 7B cuantizado, no en la ingeniería del prompt. La migración a un modelo 14B Instruct real (desde HuggingFace) o a vLLM con guided JSON serían los siguientes pasos para superar el 71%.
+
+El 7B Instruct Q4_K_M es adecuado para el MVP: genera JSON 100% válido, clasifica correctamente 5 de 7 tipos de agresión, y corre en ~5 GB de VRAM dejando espacio para otros procesos en la RX 9060 XT.
 
 ---
 
