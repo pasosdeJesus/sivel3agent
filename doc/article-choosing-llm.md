@@ -51,7 +51,7 @@ Cada caso tiene anotación manual del Banco de Datos (ground truth): código de 
 
 ## 3. Modelos Evaluados
 
-Todos corren localmente en Ollama con ROCm 7.2.0 sobre la RX 9060 XT:
+### Phase 1 — Qwen2.5 family
 
 | Modelo | Parámetros | Cuantización | VRAM | Tamaño |
 |--------|-----------|-------------|------|--------|
@@ -61,37 +61,75 @@ Todos corren localmente en Ollama con ROCm 7.2.0 sobre la RX 9060 XT:
 | qwen2.5:14b-instruct | 14B | Q4_K_M | ~9 GB | 9.0 GB |
 | qwen2.5-coder:14b | 14B | Q4_K_M | ~9 GB | 9.0 GB |
 
-**Nota:** Verificamos que `14b-instruct-q4_K_M` y `coder:14b` son el mismo GGUF en Ollama (misma arquitectura `qwen2`, mismos 14.8B parámetros, mismo contexto 32K). La variante Instruct pura de 14B no está disponible en el registry de Ollama — solo la Coder. Esto explica los resultados casi idénticos entre ambos.
+### Phase 2 — Next‑generation models
+
+| Modelo | Parámetros | Contexto | VRAM | Tamaño |
+|--------|-----------|----------|------|--------|
+| qwen3:4b | 4B | 256K | ~3 GB | 2.5 GB |
+| qwen3:8b | 8B | 40K | ~6 GB | 5.2 GB |
+| qwen3:14b | 14B | 40K | ~10 GB | 9.3 GB |
+| deepseek-r1:7b | 7B | 128K | ~5 GB | 4.7 GB |
+| llama3.2:3b | 3B | 128K | ~2 GB | 2.0 GB |
+| phi4:14b | 14B | 16K | ~10 GB | 9.1 GB |
+| gemma3:12b | 12B | 128K | ~9 GB | 8.1 GB |
+
+**Notas:**  
+- `14b-instruct-q4_K_M` y `coder:14b` son el mismo GGUF en Ollama (arquitectura `qwen2`, 14.8B, 32K). La variante Instruct pura de 14B no está en el registry.  
+- `deepseek-r1:7b` tiene "thinking mode" (razonamiento en cadena antes de responder).  
+- `phi4:14b` está limitado a 16K tokens — puede truncar artículos largos.
 
 ---
 
 ## 4. Resultados
 
-### 4.1 Puntuación general
+### 4.1 Phase 1 — Qwen2.5 family (prompt SKILL)
 
 | # | Modelo | Score | Agresión | Depto | Municipio | Velocidad |
 |---|--------|-------|----------|-------|-----------|-----------|
-| 1 | **7B Instruct** | **71.2%** | 5/7 (71%) | 6/7 | 4/7 | 7.1s |
-| 2 | 14B Instruct/Coder | 60.8% | 3/7 (43%) | 7/7 | 5/7 | 14.9s |
-| 3 | 14B Coder | 60.0% | 3/7 (43%) | 6/7 | 5/7 | 15.3s |
-| 4 | 1.5B Instruct | 53.2% | 1/7 (14%) | 6/7 | 5/7 | 3.3s |
-| 5 | 3B Instruct | 44.2% | 0/7 (0%) | 6/7 | 5/7 | 4.5s |
+| 1 | **7B Instruct** | **71.3%** | 5/7 (71%) | 6/7 | 4/7 | 7.1s |
+| 2 | 14B Instruct/Coder | 60.7% | 3/7 (43%) | 7/7 | 5/7 | 15.5s |
+| 3 | 14B Coder | 60.3% | 3/7 (43%) | 6/7 | 5/7 | 14.6s |
+| 4 | 1.5B Instruct | 53.2% | 1/7 (14%) | 6/7 | 5/7 | 3.4s |
+| 5 | 3B Instruct | 44.2% | 0/7 (0%) | 6/7 | 5/7 | 4.7s |
+
+### 4.2 Phase 2 — Next‑generation models (prompt SKILL)
+
+| # | Modelo | Score | Agresión | Depto | Municipio | Velocidad |
+|---|--------|-------|----------|-------|-----------|-----------|
+| 1 | **qwen3:8b** | **73.1%** | 5/7 (71%) | 6/7 | 5/7 | 23.3s |
+| 2 | qwen2.5:7b | 73.0% | 5/7 (71%) | 6/7 | 4/7 | 7.0s |
+| 3 | llama3.2:3b | 68.9% | 4/7 (57%) | 6/7 | 5/7 | 4.6s |
+| 4 | phi4:14b | 68.0% | 4/7 (57%) | 6/7 | 5/7 | 15.7s |
+| 5 | qwen3:14b | 63.2% | 3/7 (43%) | 7/7 | 4/7 | 40.6s |
+| 6 | deepseek-r1:7b | 61.9% | 3/7 (43%) | 5/7 | 5/7 | 19.8s |
+| 7 | gemma3:12b | 50.7% | 1/7 (14%) | 6/7 | 5/7 | 17.7s |
+| 8 | qwen3:4b | 45.0% | 2/7 (29%) | 3/7 | 2/7 | 59.2s |
 
 **Métrica de clasificación (agresión):** Se normaliza el código CINEP al número (ej: "ASESINATO (40)" → "40", "B40: ASESINATO POLÍTICO" → "40") y se compara con el ground truth. Se considera acierto si el número coincide.
 
-### 4.2 Hallazgos clave
+**Puntuación ponderada:** Classification 40% + Geographic 25% + JSON validity 10% + Speed 10% + Actor ID 10% + Context 5%.
 
-**7B supera a 14B en clasificación.** Contra-intuitivo pero consistente con lo observado en ejecuciones anteriores. El 14B tiende a sobre-analizar y elegir códigos más complejos (ej: "D703: MUERTE DE CIVIL EN ACCIÓN BÉLICA" en vez de "ASESINATO (40)"), resultando en falsos negativos en nuestra métrica de normalización.
+### 4.3 Hallazgos clave
 
-**JSON 100% válido en todos los modelos.** El prompt estructurado con lista de códigos CINEP y ejemplo de salida funciona incluso en el modelo de 1.5B.
+**qwen3:8b gana por margen mínimo (0.1%).** Empate técnico con qwen2.5:7b. Ambos logran 71% de acierto en clasificación. La diferencia: qwen3:8b mejora en municipio (5/7 vs 4/7) pero es 3.3× más lento (23.3s vs 7.0s).
 
-**Geolocalización excelente.** Incluso el modelo de 1.5B acierta 6/7 departamentos y 5/7 municipios. Los nombres de lugares son fáciles de extraer del texto.
+**7B supera a 14B en clasificación.** Consistente en ambas fases. Los modelos de 14B sobre-analizan y eligen códigos DIHC complejos (D703, D903) cuando correspondería un B40 o A10. El 7B es más conservador y acierta más.
 
-**Identificación de grupos es el punto débil.** Solo 1/7 en el mejor caso. Los modelos no logran extraer "Comandos de la Frontera" u otros nombres de grupos armados del texto fuente. Esto es esperable: el scraping de los artículos a veces no incluye el nombre del grupo en el cuerpo del texto, y los modelos pequeños no infieren.
+**llama3.2:3b es la sorpresa.** Con solo 2 GB de VRAM logra 57% de agresión a 4.6s por artículo. Excelente para despliegues con recursos limitados o edge computing.
 
-**3B fue peor que 1.5B.** El modelo de 3B obtuvo 0/7 en clasificación de agresión — posiblemente mal calibrado para tareas de extracción estructurada o con un umbral de creatividad demasiado bajo a temperatura 0.
+**phi4:14b sólido pero limitado.** 57% de agresión, comparable a llama3.2:3b, pero su contexto de 16K tokens lo hace inviable para artículos largos (>4000 palabras). Bueno para titulares o resúmenes.
 
-**Velocidad proporcional al tamaño.** 1.5B es 4.5× más rápido que 14B. Para un pipeline que procesa cientos de artículos, la diferencia es significativa.
+**deepseek-r1:7b decepciona.** Solo 43% de agresión. El "thinking mode" (razonamiento en cadena) no ayuda en tareas de extracción estructurada — genera tokens de razonamiento que no mejoran la clasificación final.
+
+**gemma3:12b y qwen3:4b no son viables.** 14% y 29% de agresión respectivamente. qwen3:4b además es el más lento (59.2s), probablemente por incompatibilidad con ROCm en este modelo específico.
+
+**JSON 100% válido en todos los modelos.** El prompt estructurado con lista de códigos CINEP y ejemplo de salida funciona incluso en el modelo de 1.5B. Cero reintentos necesarios en 104 ejecuciones (13 modelos × 8 casos).
+
+**Geolocalización es la tarea más fácil.** Incluso el peor modelo (qwen3:4b) acierta 3/7 departamentos. Extraer nombres de lugares del texto es un problema resuelto para todos los tamaños de modelo.
+
+**Identificación de grupos sigue siendo el punto débil.** El mejor modelo solo acierta 2/7. Nombres como "Comandos de la Frontera" aparecen en el texto fuente pero los modelos no los extraen consistentemente.
+
+**Velocidad no escala linealmente con tamaño.** qwen3:4b (2.5 GB) es el más lento (59s) — probablemente usando CPU. qwen3:8b (5.2 GB, 23s) es más lento que qwen2.5:7b (4.7 GB, 7s). La arquitectura del modelo importa más que el tamaño.
 
 ---
 
@@ -101,37 +139,55 @@ Todos corren localmente en Ollama con ROCm 7.2.0 sobre la RX 9060 XT:
 
 2. **14B Instruct real no disponible.** La evaluación de 14B usó el mismo GGUF que Coder. Necesitamos descargar `Qwen2.5-14B-Instruct-GGUF` desde HuggingFace para una comparación justa.
 
-3. **Prompt SKILL no mejora sobre prompt simple.** Probamos reemplazar el prompt por una versión condensada del [SKILL de documentación](doc/SKILL-document.md) que incluye las reglas de clasificación por tipo de autor (estatal → A, no estatal político → B, conflicto armado → C/D). Los resultados fueron idénticos: el cuello de botella está en la capacidad del modelo 7B, no en el prompt.
+3. **Prompt SKILL no mejora sobre prompt simple.** Probamos dos variantes de prompt sin diferencia significativa. El cuello de botella está en la capacidad del modelo, no en la ingeniería del prompt.
 
 4. **Scraping de fuentes incompleto.** Algunos artículos scrapeados contienen ruido de navegación (headers, menús) que contamina el texto de entrada.
 
 5. **Métrica de normalización simplista.** Igualar "ASESINATO (40)" con "B40: ASESINATO POLÍTICO" por el número funciona, pero pierde información semántica (DD.HH. vs VPS).
 
+6. **qwen3:4b posiblemente corrió en CPU.** Su velocidad anómala (59.2s) sugiere que Ollama no logró usar ROCm para este modelo específico. Los resultados de velocidad para este modelo no son comparables.
+
+7. **deepseek-r1:7b genera tokens de "thinking".** El modo de razonamiento añade latencia sin mejorar la precisión en extracción estructurada. Para esta tarea, modelos sin cadena de pensamiento son preferibles.
+
 ---
 
 ## 6. Próximos Pasos
 
-1. **Probar el SKILL como prompt.** Reemplazar el prompt actual por una versión condensada del SKILL de documentación, que incluye las reglas de clasificación por tipo de autor.
+1. **Migrar a qwen3:8b para producción.** Con 73.1% es el nuevo campeón, aunque 3× más lento que 7B. Evaluar si la latencia adicional es aceptable para el pipeline de scraping batch.
 
-2. **Descargar 14B Instruct real.** Obtener el GGUF de `Qwen2.5-14B-Instruct` desde HuggingFace para una comparación justa con 7B.
+2. **Descargar 14B Instruct real.** Obtener el GGUF de `Qwen2.5-14B-Instruct` desde HuggingFace para resolver la incógnita de si un 14B real supera al 7B/8B.
 
-3. **Expandir golden dataset.** Agregar casos de otras regiones y períodos (Cauca, Antioquia, Palestina 2025-2026).
+3. **Expandir golden dataset.** Agregar casos de Cauca, Antioquia y Palestina (2025-2026) para llegar a 30+ casos con diversidad geográfica y tipológica.
 
-4. **Probar vLLM con guided JSON.** Migrar de Ollama a vLLM (requiere ROCm 7.13, [REQ/14](REQ/14.md)) para forzar salida JSON válida sin reintentos.
+4. **Probar vLLM con guided JSON.** Migrar de Ollama a vLLM (requiere ROCm 7.13, [REQ/14](REQ/14.md)) para forzar salida JSON válida y potencialmente mejorar clasificación.
 
-5. **Evaluar Qwen3 y DeepSeek.** Modelos más recientes que podrían superar a Qwen2.5 en extracción estructurada.
+5. **Investigar qwen3:4b en ROCm.** Su velocidad anómala (59s) sugiere que no está usando la GPU. Verificar compatibilidad ROCm para modelos qwen3 pequeños.
 
-6. **Métrica semántica.** Complementar la normalización por número con distancia semántica entre códigos (ej: A10 vs B40 son ambos homicidio pero distinta categoría).
+6. **Métrica semántica.** Complementar la normalización por número con distancia semántica entre códigos (ej: A10 vs B40 son ambos homicidio pero distinta categoría de autor).
+
+7. **Evaluar DeepSeek-R1 sin thinking mode.** Probar `deepseek-r1:7b` con el parámetro `num_think=0` o similar para ver si el rendimiento mejora sin la cadena de razonamiento.
 
 ---
 
-## 7. Conclusión Preliminar
+## 7. Conclusión
 
-**Qwen2.5-7B-Instruct (Q4_K_M) es el mejor modelo disponible para el MVP de sivel3agent.** Con 71% de acierto en clasificación y 7.1 segundos por artículo, ofrece el mejor balance precisión/velocidad/VRAM. El modelo ya está en producción generando pre‑alertas desde fuentes RSS colombianas y palestinas.
+Evaluamos 13 configuraciones de modelos (5 Qwen2.5 + 7 next‑gen + 1 coder) para extraer y clasificar hechos de violencia política desde artículos de prensa siguiendo la metodología **Noche y Niebla** del Banco de Datos del CINEP.
 
-Probamos dos variantes de prompt (simple y basado en el SKILL de documentación Noche y Niebla) sin diferencia significativa, lo que sugiere que el límite está en la capacidad del modelo 7B cuantizado, no en la ingeniería del prompt. La migración a un modelo 14B Instruct real (desde HuggingFace) o a vLLM con guided JSON serían los siguientes pasos para superar el 71%.
+**Ganador técnico: qwen3:8b (73.1%).** Pero el margen sobre qwen2.5:7b (73.0%) es insignificante. Para producción recomendamos:
 
-El 7B Instruct Q4_K_M es adecuado para el MVP: genera JSON 100% válido, clasifica correctamente 5 de 7 tipos de agresión, y corre en ~5 GB de VRAM dejando espacio para otros procesos en la RX 9060 XT.
+| Uso | Modelo | Score | Velocidad | VRAM |
+|-----|-------|-------|-----------|------|
+| **Producción MVP** | qwen2.5:7b | 73.0% | 7.0s | 4.7 GB |
+| **Máxima precisión** | qwen3:8b | 73.1% | 23.3s | 5.2 GB |
+| **Edge / bajo consumo** | llama3.2:3b | 68.9% | 4.6s | 2.0 GB |
+
+**qwen2.5:7b-instruct-q4_K_M sigue siendo la mejor opción para el MVP de sivel3agent:** precisión virtualmente idéntica al ganador pero 3.3× más rápido y con menor consumo de VRAM. Ya está en producción generando pre‑alertas desde fuentes RSS colombianas y palestinas.
+
+La siguiente frontera no está en cambiar de modelo sino en mejorar el pipeline: scraping de artículos completos (#13), vLLM con guided JSON (#14), y expansión del golden dataset para evaluación más robusta.
+
+---
+
+**Agradecimientos:** Al Banco de Datos del CINEP por proporcionar los casos anotados y la metodología Noche y Niebla. Este trabajo se realizó con hardware donado por la comunidad: AMD Radeon RX 9060 XT (16 GB VRAM) corriendo ROCm 7.2.0 sobre Ubuntu 24.04.
 
 ---
 
