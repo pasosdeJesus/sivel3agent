@@ -36,11 +36,16 @@ interface ModelResult {
 }
 
 const MODELS = [
-  'qwen2.5:1.5b-instruct-q4_K_M',
-  'qwen2.5:3b-instruct-q4_K_M',
+  // Phase 1 winners
   'qwen2.5:7b-instruct-q4_K_M',
-  'qwen2.5:14b-instruct-q4_K_M',
-  'qwen2.5-coder:14b',
+  // Phase 2 candidates
+  'qwen3:4b',
+  'qwen3:8b',
+  'qwen3:14b',
+  'deepseek-r1:7b',
+  'llama3.2:3b',
+  'phi4:14b',
+  'gemma3:12b',
 ]
 
 function loadGoldenDataset(): GoldenCase[] {
