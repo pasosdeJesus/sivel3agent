@@ -1,9 +1,24 @@
+import { execSync } from 'child_process'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { extractPreAlert } from '../lib/extractPreAlert'
 
 const SIVEL3_API_URL = process.env.SIVEL3_API_URL
+const AGENT_WALLET_NAME = process.env.AGENT_WALLET_NAME || 'sivel3agent'
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '10')
 const DRY_RUN = process.env.DRY_RUN === 'true'
+
+function signMessage(message: string): string {
+  const cmd = `./bin/m wallet:sign --name ${AGENT_WALLET_NAME} --message "${message}"`
+  try {
+    const result = execSync(cmd, { encoding: 'utf-8', timeout: 15000 })
+    // Extract signature from output (format: "Signature: 0x...")
+    const match = result.match(/0x[a-fA-F0-9]{130,}/)
+    if (!match) throw new Error(`Could not parse signature from: ${result}`)
+    return match[0]
+  } catch (err) {
+    throw new Error(`wallet:sign failed: ${err instanceof Error ? err.message : err}`)
+  }
+}
 
 async function sendToSivel3(preAlert: {
   json: object
@@ -16,20 +31,41 @@ async function sendToSivel3(preAlert: {
     return null
   }
 
-  console.log(`  📡 Sending to sivel.xyz…`)
-  // TODO: implement when #44 is ready
-  // const response = await fetch(SIVEL3_API_URL, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({
-  //     json_data: preAlert.json,
-  //     event_hash: preAlert.eventHash,
-  //     publisher_wallet: process.env.AGENT_WALLET_ADDRESS || '',
-  //     source_urls: [preAlert.sourceUrl],
-  //   }),
-  // })
-  console.log(`  ⏳ sivel.xyz send pending (#44 not implemented)`)
-  return null
+  const timestamp = new Date().toISOString()
+  const message = `${preAlert.eventHash}:${timestamp}`
+  const signature = signMessage(message)
+
+  console.log(`  📡 Sending to sivel.xyz (signed by ${AGENT_WALLET_NAME})…`)
+
+  const response = await fetch(`${SIVEL3_API_URL}/sync`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Agent-Signature': signature,
+      'X-Agent-Timestamp': timestamp,
+    },
+    body: JSON.stringify({
+      event_hash: preAlert.eventHash,
+      json_data: preAlert.json,
+      publisher_wallet: process.env.AGENT_WALLET_ADDRESS || '',
+      source_urls: [preAlert.sourceUrl],
+      source_summary: `sivel3agent auto-generated`,
+    }),
+  })
+
+  if (response.status === 409) {
+    console.log(`  ⚠️  Duplicate on sivel.xyz (event_hash already exists)`)
+    return null
+  }
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`sivel.xyz returned ${response.status}: ${error}`)
+  }
+
+  const data = (await response.json()) as { pre_alert_id: number }
+  console.log(`  ✅ sivel.xyz ID: ${data.pre_alert_id}`)
+  return data.pre_alert_id
 }
 
 async function generateAndSend() {
@@ -37,6 +73,7 @@ async function generateAndSend() {
   const startTime = new Date().toISOString()
 
   console.log(`[generate-and-send] Starting at ${startTime}`)
+  console.log(`  Agent wallet: ${AGENT_WALLET_NAME}`)
   console.log(`  Batch size: ${BATCH_SIZE}`)
   console.log(`  Dry run: ${DRY_RUN}`)
   console.log(`  sivel.xyz API: ${SIVEL3_API_URL || 'not configured'}`)
@@ -72,7 +109,7 @@ async function generateAndSend() {
         sourceMedium: source.medium || 'Unknown',
       })
 
-      // Dedup
+      // Dedup locally
       const dupCheck = await db
         .selectFrom('pre_alert')
         .select('id')
@@ -110,7 +147,7 @@ async function generateAndSend() {
         .values({ pre_alert_id: preAlert.id, source_id: source.id })
         .execute()
 
-      console.log(`   ✅ Pre‑alert ID: ${preAlert.id} (${eventHash.slice(0, 16)}…)`)
+      console.log(`   ✅ Local ID: ${preAlert.id} (${eventHash.slice(0, 16)}…)`)
       generated++
 
       // Send to sivel.xyz
@@ -130,7 +167,7 @@ async function generateAndSend() {
 
   const endTime = new Date().toISOString()
   console.log(`\n[generate-and-send] Finished at ${endTime}`)
-  console.log(`   Generated: ${generated} | Sent: ${sent} | Skipped: ${skipped}`)
+  console.log(`   Generated: ${generated} | Sent to sivel.xyz: ${sent} | Skipped: ${skipped}`)
 }
 
 const isMain = process.argv[1]?.includes('generate-and-send')
@@ -140,4 +177,4 @@ if (isMain) {
     .catch((e) => { console.error('Fatal:', e); process.exit(1) })
 }
 
-export { generateAndSend }
+export { generateAndSend, signMessage }
