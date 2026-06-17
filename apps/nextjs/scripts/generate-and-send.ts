@@ -1,40 +1,7 @@
-# REQ/7 — Generate and Send Pre‑Alerts
-
-Orchestrate the end‑to‑end flow from a classified source article to a published pre‑alert. This script wraps the existing `extract-and-save.ts` (#6) with the ability to send pre‑alerts to `sivel.xyz` when the API endpoint (#44) becomes available.
-
-**Current status (MVP):** Steps 1–4 are implemented in `scripts/extract-and-save.ts`. This REQ adds the orchestration wrapper and prepares the send layer.
-
----
-
-## Data Flow (MVP)
-
-```
-1. Scraper (#4/#12) populates source table (is_relevant = true/false)
-2. extract-and-save.ts (#6) reads is_relevant=true, extracts JSON, saves locally
-3. generate-and-send.ts (this REQ) optionally sends to sivel.xyz
-4. sivel.xyz API (#44) receives and publishes — NOT YET IMPLEMENTED
-```
-
-**For MVP**, `generate-and-send.ts` is equivalent to `extract-and-save.ts` with added:
-- Logging with timestamps
-- Batch size configurable via env var
-- Stub for sivel.xyz send (logs "would send" when API unavailable)
-- Dry‑run mode for testing
-
----
-
-## Implementation
-
-### 1. Script: generate-and-send.ts
-
-**File:** `scripts/generate-and-send.ts`
-
-```typescript
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { extractPreAlert } from '../lib/extractPreAlert'
 
 const SIVEL3_API_URL = process.env.SIVEL3_API_URL
-const AGENT_WALLET = process.env.AGENT_WALLET_ADDRESS || ''
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '10')
 const DRY_RUN = process.env.DRY_RUN === 'true'
 
@@ -57,7 +24,7 @@ async function sendToSivel3(preAlert: {
   //   body: JSON.stringify({
   //     json_data: preAlert.json,
   //     event_hash: preAlert.eventHash,
-  //     publisher_wallet: AGENT_WALLET,
+  //     publisher_wallet: process.env.AGENT_WALLET_ADDRESS || '',
   //     source_urls: [preAlert.sourceUrl],
   //   }),
   // })
@@ -174,77 +141,3 @@ if (isMain) {
 }
 
 export { generateAndSend }
-```
-
-### 2. Environment Configuration
-
-Add to `apps/.env`:
-
-```bash
-# Orchestration
-BATCH_SIZE=10
-DRY_RUN=false
-
-# sivel.xyz API (for #44, not yet implemented)
-SIVEL3_API_URL=
-AGENT_WALLET_ADDRESS=0x8C88169977c180f6380C01daAA9c7F31894c20dc
-```
-
-### 3. Migration: remote_id
-
-When #44 is implemented, add `remote_id` to `pre_alert`:
-
-```sql
-ALTER TABLE pre_alert ADD COLUMN remote_id INTEGER;
-```
-
-**Not needed for MVP** — sivel.xyz API is not yet available.
-
----
-
-## Acceptance Criteria
-
-- [x] `generate-and-send.ts` reads `is_relevant=true` sources not yet processed
-- [x] Calls `extractPreAlert` from #6
-- [x] Deduplicates by `event_hash`
-- [x] Saves to local `pre_alert` and links via `pre_alert_source`
-- [x] Handles errors per‑article (continues to next)
-- [x] Configurable batch size via `BATCH_SIZE` env var
-- [x] Dry‑run mode via `DRY_RUN=true`
-- [x] Stub for sivel.xyz send (logs intent, doesn't crash)
-- [ ] Send to sivel.xyz functional (blocked by #44)
-
----
-
-## Fine‑Tuning Decision
-
-Based on #10 evaluation results:
-
-| Model | Score | Agresión | Velocidad | Fine‑tune? |
-|-------|-------|----------|-----------|------------|
-| qwen3:8b | 73.1% | 71% | 23.3s | ⏳ Candidate |
-| qwen2.5:7b | 73.0% | 71% | 7.0s | ✅ Current production |
-
-**Recommendation:** Do NOT fine‑tune yet. The 0.1% difference is noise. The real bottleneck is:
-1. **14B Instruct real** not evaluated — could surpass both 7B/8B
-2. **Golden dataset too small** (7 cases) — need 30+ for fine‑tuning
-3. **ROI analysis:** Fine‑tuning requires 500+ annotated examples. Better ROI from:
-   - Downloading true Qwen2.5‑14B‑Instruct GGUF
-   - vLLM with guided JSON (#14)
-   - Better source scraping for cleaner input text
-
-**When to revisit:** After expanding golden dataset to 30+ cases AND testing true 14B Instruct. If both 7B/8B still plateau at ~71%, then fine‑tune the faster one (qwen2.5:7b).
-
----
-
-## Dependencies
-
-- Requires #2 (`source`, `pre_alert`, `pre_alert_source` tables)
-- Requires #4/#12 (scraper with classification)
-- Requires #6 (`extractPreAlert`)
-- Blocks: #44 (sivel.xyz API — when available)
-- Related: #10 (model evaluation), #8 (cron scheduling)
-
----
-
-> *"Whatever you do, work at it with all your heart, as working for the Lord, not for human masters."* (Colossians 3:23)

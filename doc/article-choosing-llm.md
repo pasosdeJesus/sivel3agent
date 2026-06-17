@@ -74,9 +74,7 @@ Cada caso tiene anotación manual del Banco de Datos (ground truth): código de 
 | gemma3:12b | 12B | 128K | ~9 GB | 8.1 GB |
 
 **Notas:**  
-- `14b-instruct-q4_K_M` y `coder:14b` son el mismo GGUF en Ollama (arquitectura `qwen2`, 14.8B, 32K). La variante Instruct pura de 14B no está en el registry.  
-- `deepseek-r1:7b` tiene "thinking mode" (razonamiento en cadena antes de responder).  
-- `phi4:14b` está limitado a 16K tokens — puede truncar artículos largos.
+- `14b-instruct-q4_K_M`, `coder:14b` y `14b-instruct-real` son el mismo GGUF. Qwen2.5-14B no tiene una variante Instruct separada — el modelo base ya es instruct. Nuestra evaluación de 14B es definitiva: no supera al 7B/8B en esta tarea.
 
 ---
 
@@ -137,7 +135,7 @@ Cada caso tiene anotación manual del Banco de Datos (ground truth): código de 
 
 1. **Golden dataset pequeño (7 casos).** Resultados preliminares. Se necesita expandir a 30-50 casos para significancia estadística. Cubrimos solo Putumayo — faltan otras regiones (Cauca, Antioquia, Palestina).
 
-2. **14B Instruct real no disponible.** La evaluación de 14B usó el mismo GGUF que Coder. Necesitamos descargar `Qwen2.5-14B-Instruct-GGUF` desde HuggingFace para una comparación justa.
+2. **14B Instruct real no existe como GGUF independiente.** Intentamos descargar `Qwen2.5-14B-Instruct-GGUF` desde HuggingFace (bartowski y Qwen oficial). Ambos son el mismo GGUF que el Coder — misma arquitectura `qwen2`, mismos 14.8B parámetros, mismo contexto 32K. Qwen no publicó un 14B Instruct separado del Coder; el modelo base ya es instruct. Nuestra evaluación de 14B es definitiva.
 
 3. **Prompt SKILL no mejora sobre prompt simple.** Probamos dos variantes de prompt sin diferencia significativa. El cuello de botella está en la capacidad del modelo, no en la ingeniería del prompt.
 
@@ -155,17 +153,15 @@ Cada caso tiene anotación manual del Banco de Datos (ground truth): código de 
 
 1. **Migrar a qwen3:8b para producción.** Con 73.1% es el nuevo campeón, aunque 3× más lento que 7B. Evaluar si la latencia adicional es aceptable para el pipeline de scraping batch.
 
-2. **Descargar 14B Instruct real.** Obtener el GGUF de `Qwen2.5-14B-Instruct` desde HuggingFace para resolver la incógnita de si un 14B real supera al 7B/8B.
+2. **Expandir golden dataset.** Agregar casos de Cauca, Antioquia y Palestina (2025-2026) usando la misma metodología: casos del Banco de Datos con fuentes de prensa verificables. Meta: 30+ casos.
 
-3. **Expandir golden dataset.** Agregar casos de Cauca, Antioquia y Palestina (2025-2026) para llegar a 30+ casos con diversidad geográfica y tipológica.
+3. **Probar vLLM con guided JSON.** Migrar de Ollama a vLLM (requiere ROCm 7.13, [REQ/14](REQ/14.md)) para forzar salida JSON válida y potencialmente mejorar clasificación.
 
-4. **Probar vLLM con guided JSON.** Migrar de Ollama a vLLM (requiere ROCm 7.13, [REQ/14](REQ/14.md)) para forzar salida JSON válida y potencialmente mejorar clasificación.
+4. **Investigar qwen3:4b en ROCm.** Su velocidad anómala (59s) sugiere que no está usando la GPU. Verificar compatibilidad ROCm para modelos qwen3 pequeños.
 
-5. **Investigar qwen3:4b en ROCm.** Su velocidad anómala (59s) sugiere que no está usando la GPU. Verificar compatibilidad ROCm para modelos qwen3 pequeños.
+5. **Métrica semántica.** Complementar la normalización por número con distancia semántica entre códigos (ej: A10 vs B40 son ambos homicidio pero distinta categoría de autor).
 
-6. **Métrica semántica.** Complementar la normalización por número con distancia semántica entre códigos (ej: A10 vs B40 son ambos homicidio pero distinta categoría de autor).
-
-7. **Evaluar DeepSeek-R1 sin thinking mode.** Probar `deepseek-r1:7b` con el parámetro `num_think=0` o similar para ver si el rendimiento mejora sin la cadena de razonamiento.
+6. **Fine‑tuning (#11).** Postergado hasta tener 100+ casos anotados. La evaluación actual muestra que 14B no supera a 7B/8B, así que el fine‑tuning sería sobre qwen2.5:7b o qwen3:8b. Prioridad baja para MVP.
 
 ---
 
