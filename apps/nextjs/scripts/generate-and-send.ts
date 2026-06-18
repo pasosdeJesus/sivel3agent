@@ -1,4 +1,5 @@
 import { execSync } from 'child_process'
+import { Kysely } from 'kysely'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { extractPreAlert } from '../lib/extractPreAlert'
 
@@ -68,8 +69,8 @@ async function sendToSivel3(preAlert: {
   return data.pre_alert_id
 }
 
-async function generateAndSend() {
-  const db = newKyselyPostgresql()
+async function generateAndSend(dbOverride?: Kysely<unknown>) {
+  const db = dbOverride || newKyselyPostgresql()
   const startTime = new Date().toISOString()
 
   console.log(`[generate-and-send] Starting at ${startTime}`)
