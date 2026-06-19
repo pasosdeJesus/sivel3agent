@@ -50,7 +50,10 @@ export async function detectCase(
     return { isCase: false, reason: 'No relatos in JSON output' }
   }
 
-  // 4. Validate: has violence category (actos or agresion_particular)?
+  // 4. Validate: has valid actos with agresion_particular?
+  // A victim is defined by the act of violence (acto), not by a separate
+  // "estado" field. The victim may be NN (nombre/identidad desconocida).
+  // Priorities: A (DD.HH.), B (VPS), D (DIHC). C (Acción Bélica) is secondary.
   const actos = relato.actos as Array<Record<string, unknown>> | undefined
   const agresionParticular =
     (relato.agresion_particular as string) ||
@@ -60,17 +63,30 @@ export async function detectCase(
     return { isCase: false, reason: 'No violence category (agresion_particular) found' }
   }
 
-  // 5. Validate: has victims?
+  // Require at least one acto with a valid aggression code
+  const hasValidActo = actos && actos.length > 0 && actos.some((a: Record<string, unknown>) => {
+    const ap = a.agresion_particular as string
+    return ap && ap !== 'SIN INFORMACIÓN' && ap !== 'null'
+  })
+  if (!hasValidActo) {
+    return { isCase: false, reason: 'No valid actos (agresion_particular) found' }
+  }
+
+  // 5. Validate: has victims? Victim exists because an acto links to them.
+  // Check personas (individual victims linked via actos.id_victima_individual)
+  // or victimas (collective). cantidad (muertos/heridos/desplazados) also counts.
   const victimas = relato.victimas as Array<Record<string, unknown>> | undefined
   const personas = json.personas as Array<Record<string, unknown>> | undefined
   const cantidad = relato.cantidad as Record<string, number> | undefined
 
   const hasVictims =
-    (victimas && victimas.length > 0 && victimas.some((v: Record<string, unknown>) => {
-      const estado = (v.estado as string || '').toLowerCase()
-      return ['muerto', 'herido', 'desaparecido', 'desplazado', 'amenazado', 'muerta', 'herida'].some(s => estado.includes(s))
-    })) ||
-    (cantidad && (cantidad.muertos || cantidad.heridos || cantidad.desplazados))
+    (victimas && victimas.length > 0) ||
+    (personas && personas.length > 0) ||
+    (cantidad && ((cantidad.muertos || 0) > 0 || (cantidad.heridos || 0) > 0 || (cantidad.desplazados || 0) > 0))
+
+  if (!hasVictims) {
+    return { isCase: false, reason: 'No victims found (individual or collective)' }
+  }
 
   if (!hasVictims) {
     return { isCase: false, reason: 'No victims found (individual or collective)' }

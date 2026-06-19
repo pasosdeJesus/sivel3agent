@@ -1,24 +1,30 @@
 import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
+import { homedir } from 'os'
 import { Kysely } from 'kysely'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { extractPreAlert } from '../lib/extractPreAlert'
 
 const SIVEL3_API_URL = process.env.SIVEL3_API_URL
-const AGENT_WALLET_NAME = process.env.AGENT_WALLET_NAME || 'sivel3agent'
+const AGENT_WALLET_NAME = process.env.AGENT_WALLET_NAME || 'sivel3agent-dev'
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '10')
-const DRY_RUN = process.env.DRY_RUN === 'true'
 
-function signMessage(message: string): string {
-  const cmd = `./bin/m wallet:sign --name ${AGENT_WALLET_NAME} --message "${message}"`
+async function signMessage(message: string): Promise<string> {
+  // Read wallet JSON from ~/.m/wallets/<name>.json
+  const walletPath = resolve(homedir(), '.m', 'wallets', `${AGENT_WALLET_NAME}.json`)
+  let wallet: { privateKey?: string; address?: string }
   try {
-    const result = execSync(cmd, { encoding: 'utf-8', timeout: 15000 })
-    // Extract signature from output (format: "Signature: 0x...")
-    const match = result.match(/0x[a-fA-F0-9]{130,}/)
-    if (!match) throw new Error(`Could not parse signature from: ${result}`)
-    return match[0]
-  } catch (err) {
-    throw new Error(`wallet:sign failed: ${err instanceof Error ? err.message : err}`)
+    wallet = JSON.parse(readFileSync(walletPath, 'utf-8'))
+  } catch {
+    throw new Error(`Wallet not found: ${walletPath}`)
   }
+  if (!wallet.privateKey) {
+    throw new Error(`Wallet "${AGENT_WALLET_NAME}" has no private key`)
+  }
+  const { privateKeyToAccount } = await import('viem/accounts')
+  const account = privateKeyToAccount(wallet.privateKey as `0x${string}`)
+  return account.signMessage({ message })
 }
 
 async function sendToSivel3(preAlert: {
@@ -34,11 +40,26 @@ async function sendToSivel3(preAlert: {
 
   const timestamp = new Date().toISOString()
   const message = `${preAlert.eventHash}:${timestamp}`
-  const signature = signMessage(message)
+  const signature = await signMessage(message)
 
   console.log(`  📡 Sending to sivel.xyz (signed by ${AGENT_WALLET_NAME})…`)
 
-  const response = await fetch(`${SIVEL3_API_URL}/sync`, {
+  // sivel.xyz expects { titulo, hechos } at root level of json_data.
+  // LLM generates Noche y Niebla format { relatos: [{ titulo, hechos, ... }] }.
+  const relato = (preAlert.json as Record<string, unknown>)?.relatos as Record<string, unknown>[] | undefined
+  const flat = relato?.[0]
+  const jsonData = flat
+    ? {
+        titulo: (flat.titulo as string) || '',
+        hechos: (flat.hechos as string) || '',
+        fecha: (flat.fecha as string) || '',
+        departamento: (flat.departamento as string) || '',
+        municipio: (flat.municipio as string) || '',
+        agresion_particular: (flat.agresion_particular as string) || '',
+      }
+    : preAlert.json
+
+  const response = await fetch(`${SIVEL3_API_URL}/api/pre-alerts/sync`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -47,7 +68,7 @@ async function sendToSivel3(preAlert: {
     },
     body: JSON.stringify({
       event_hash: preAlert.eventHash,
-      json_data: preAlert.json,
+      json_data: jsonData,
       publisher_wallet: process.env.AGENT_WALLET_ADDRESS || '',
       source_urls: [preAlert.sourceUrl],
       source_summary: `sivel3agent auto-generated`,
@@ -72,94 +93,73 @@ async function sendToSivel3(preAlert: {
 async function generateAndSend(dbOverride?: Kysely<unknown>) {
   const db = dbOverride || newKyselyPostgresql()
   const startTime = new Date().toISOString()
+  const dryRun = process.env.DRY_RUN === 'true'
+  const apiUrl = process.env.SIVEL3_API_URL
 
   console.log(`[generate-and-send] Starting at ${startTime}`)
   console.log(`  Agent wallet: ${AGENT_WALLET_NAME}`)
   console.log(`  Batch size: ${BATCH_SIZE}`)
-  console.log(`  Dry run: ${DRY_RUN}`)
-  console.log(`  sivel.xyz API: ${SIVEL3_API_URL || 'not configured'}`)
+  console.log(`  Dry run: ${dryRun}`)
+  console.log(`  sivel.xyz API: ${apiUrl || 'not configured'}`)
 
-  const sources = await db
-    .selectFrom('source')
-    .select(['id', 'url', 'title', 'published_at', 'clean_text', 'medium'])
-    .leftJoin('pre_alert_source', 'source.id', 'pre_alert_source.source_id')
-    .where('pre_alert_source.pre_alert_id', 'is', null)
-    .where('clean_text', 'is not', null)
-    .where('is_relevant', '=', true)
+  // Read pre_alerts already validated by detect-cases.ts (status = 'pending')
+  const preAlerts = await db
+    .selectFrom('pre_alert')
+    .innerJoin('pre_alert_source', 'pre_alert_source.pre_alert_id', 'pre_alert.id')
+    .innerJoin('source', 'source.id', 'pre_alert_source.source_id')
+    .select([
+      'pre_alert.id as pre_alert_id',
+      'pre_alert.event_hash',
+      'pre_alert.json_data',
+      'source.url as source_url',
+      'source.title',
+      'source.medium',
+    ])
+    .where('pre_alert.status', '=', 'pending')
     .limit(BATCH_SIZE)
     .execute()
 
-  console.log(`\nFound ${sources.length} relevant unprocessed sources.\n`)
+  console.log(`\nFound ${preAlerts.length} pending pre_alerts.\n`)
 
-  let generated = 0
   let sent = 0
   let skipped = 0
 
-  for (const source of sources) {
-    if (!source.clean_text) continue
-
-    console.log(`📄 ${source.title?.slice(0, 80)}`)
-    console.log(`   Source: ${source.medium} | ${source.published_at?.toISOString().split('T')[0]}`)
+  for (const pa of preAlerts) {
+    console.log(`📄 ${(pa.title as string)?.slice(0, 80) || '(no title)'}`)
+    console.log(`   Source: ${pa.medium} | Pre-alert ID: ${pa.pre_alert_id}`)
 
     try {
-      const { json, eventHash } = await extractPreAlert({
-        title: source.title || '',
-        date: source.published_at?.toISOString().split('T')[0] || '',
-        text: source.clean_text,
-        sourceUrl: source.url,
-        sourceMedium: source.medium || 'Unknown',
-      })
+      if (dryRun) {
+        console.log(`   🔍 Dry run — would send to sivel.xyz.`)
+        sent++
+        continue
+      }
 
-      // Dedup locally
-      const dupCheck = await db
-        .selectFrom('pre_alert')
-        .select('id')
-        .where('event_hash', '=', eventHash)
-        .executeTakeFirst()
-
-      if (dupCheck) {
-        console.log(`   ⏭️  Duplicate (event_hash), skipping.`)
+      if (!apiUrl) {
+        console.log(`   📡 sivel.xyz not configured — skipping send`)
         skipped++
         continue
       }
-
-      if (DRY_RUN) {
-        console.log(`   🔍 Dry run — would save pre_alert.`)
-        generated++
-        continue
-      }
-
-      // Save locally
-      const preAlert = await db
-        .insertInto('pre_alert')
-        .values({ event_hash: eventHash, json_data: json, status: 'pending' })
-        .returning('id')
-        .executeTakeFirst()
-
-      if (!preAlert) {
-        console.log(`   ❌ Failed to insert.`)
-        skipped++
-        continue
-      }
-
-      // Link source
-      await db
-        .insertInto('pre_alert_source')
-        .values({ pre_alert_id: preAlert.id, source_id: source.id })
-        .execute()
-
-      console.log(`   ✅ Local ID: ${preAlert.id} (${eventHash.slice(0, 16)}…)`)
-      generated++
 
       // Send to sivel.xyz
       const remoteId = await sendToSivel3({
-        json,
-        eventHash,
-        sourceUrl: source.url,
-        preAlertId: preAlert.id,
+        json: (pa.json_data as Record<string, unknown>) || {},
+        eventHash: pa.event_hash,
+        sourceUrl: pa.source_url as string,
+        preAlertId: pa.pre_alert_id as number,
       })
-      if (remoteId) sent++
 
+      if (remoteId !== null) {
+        // Mark as synced
+        await db
+          .updateTable('pre_alert')
+          .set({ status: 'synced' })
+          .where('id', '=', pa.pre_alert_id as number)
+          .execute()
+        sent++
+      } else {
+        skipped++
+      }
     } catch (err) {
       console.error(`   ❌ Error: ${err instanceof Error ? err.message : err}`)
       skipped++
@@ -168,7 +168,7 @@ async function generateAndSend(dbOverride?: Kysely<unknown>) {
 
   const endTime = new Date().toISOString()
   console.log(`\n[generate-and-send] Finished at ${endTime}`)
-  console.log(`   Generated: ${generated} | Sent to sivel.xyz: ${sent} | Skipped: ${skipped}`)
+  console.log(`   Sent to sivel.xyz: ${sent} | Skipped: ${skipped}`)
 }
 
 const isMain = process.argv[1]?.includes('generate-and-send')
