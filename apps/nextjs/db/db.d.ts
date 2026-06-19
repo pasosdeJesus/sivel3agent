@@ -38,10 +38,13 @@ export interface PreAlertSource {
 }
 
 export interface Source {
+  classification_reason: string | null;
   clean_text: string | null;
   content_hash: string | null;
+  detected_at: Timestamp | null;
   fetched_at: Generated<Timestamp | null>;
   id: Generated<number>;
+  is_relevant: boolean | null;
   medium: string | null;
   metadata: Json | null;
   published_at: Timestamp | null;

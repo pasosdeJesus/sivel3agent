@@ -1,10 +1,38 @@
 import Parser from 'rss-parser'
 import { parse as parseHTML } from 'node-html-parser'
 import { createHash } from 'crypto'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import axios from 'axios'
+import { parseStringPromise } from 'xml2js'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { classifyByKeywords } from '../lib/classifyByKeywords'
 import { classifyNewsLLM } from '../lib/classifyNewsLLM'
+
+/**
+ * RSS scraper for sivel3agent.
+ *
+ * Reads RSS feed URLs from config/sources.json (active section).
+ *
+ * Usage:
+ *   node_modules/.bin/tsx scripts/scrape-news.ts [SOURCE_NAME|URL_FRAGMENT]
+ *
+ * Environment variables:
+ *   SCRAPE_FEED       Filter by medium name or URL substring (alternative to CLI arg)
+ *   SCRAPE_START_DATE  Override START_DATE (default: 2025-07-01). Format: YYYY-MM-DD
+ *   SCRAPE_END_DATE    Override END_DATE (default: now). Format: YYYY-MM-DD
+ *   DOTENV_CONFIG_PATH Path to .env file (default: ../.env)
+ *
+ * Examples:
+ *   # Scrape all active feeds from config/sources.json
+ *   node_modules/.bin/tsx scripts/scrape-news.ts
+ *
+ *   # Scrape only INDEPAZ
+ *   node_modules/.bin/tsx scripts/scrape-news.ts INDEPAZ
+ *
+ *   # Scrape a specific date range
+ *   SCRAPE_START_DATE=2026-01-01 SCRAPE_END_DATE=2026-06-01 node_modules/.bin/tsx scripts/scrape-news.ts
+ */
 
 interface FeedConfig {
   url: string
@@ -12,26 +40,25 @@ interface FeedConfig {
   region: string
 }
 
-const RSS_FEEDS: FeedConfig[] = [
-  { url: 'https://indepaz.org.co/feed/', medium: 'INDEPAZ', region: 'Colombia' },
-  { url: 'https://www.eltiempo.com/rss/justicia_conflicto-y-narcotrafico.xml', medium: 'El Tiempo', region: 'Colombia' },
-  { url: 'https://www.hrw.org/rss/news', medium: 'HRW', region: 'Colombia' },
-  { url: 'https://reliefweb.int/updates/rss.xml?search=primary_country.iso3:PSE', medium: 'ReliefWeb', region: 'Palestine' },
-  { url: 'https://miputumayo.com.co/feed/', medium: 'MiPutumayo Noticias', region: 'Putumayo' },
-  { url: 'https://verdadabierta.com/feed/', medium: 'Verdad Abierta', region: 'Colombia' },
-  { url: 'https://www.justiciaypazcolombia.com/feed/', medium: 'Comisión Intereclesial', region: 'Colombia' },
-  { url: 'https://prensarural.org/spip/spip.php?page=backend', medium: 'Prensa Rural', region: 'Colombia' },
-  { url: 'https://www.contagioradio.com/feed/', medium: 'Contagio Radio', region: 'Colombia' },
-  { url: 'https://www.las2orillas.co/feed/', medium: 'Las2Orillas', region: 'Colombia' },
-  { url: 'https://www.larepublica.co/feed/', medium: 'La República', region: 'Colombia' },
-  { url: 'https://www.elheraldo.co/feed/', medium: 'El Heraldo', region: 'Colombia' },
-  { url: 'https://www.larazon.co/feed/', medium: 'La Razón', region: 'Colombia' },
-  { url: 'https://voragine.co/feed/', medium: 'Vorágine', region: 'Colombia' },
-  { url: 'https://mutante.org/feed/', medium: 'Mutante', region: 'Colombia' },
-]
+function loadRSSFeeds(): FeedConfig[] {
+  const configPath = resolve(import.meta.dirname, '..', 'config', 'sources.json')
+  const raw = readFileSync(configPath, 'utf-8')
+  const config = JSON.parse(raw)
+  if (!config.active || !Array.isArray(config.active)) {
+    console.error('config/sources.json missing "active" array')
+    process.exit(1)
+  }
+  return config.active.map((f: { name: string; url: string; region: string }) => ({
+    url: f.url,
+    medium: f.name,
+    region: f.region,
+  }))
+}
 
-const START_DATE = new Date('2025-07-01')
-const END_DATE = new Date()
+const RSS_FEEDS = loadRSSFeeds()
+
+const START_DATE = new Date(process.env.SCRAPE_START_DATE || '2025-07-01')
+const END_DATE = new Date(process.env.SCRAPE_END_DATE || new Date().toISOString())
 
 interface Article {
   url: string
@@ -78,30 +105,88 @@ async function fetchFullArticle(url: string): Promise<string> {
 }
 
 async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
+  // Try strict parser first
+  try {
+    return await fetchRSSFeedStrict(feedConfig)
+  } catch (strictErr) {
+    console.warn(`   ⚠️  rss-parser failed (${(strictErr as Error).message.slice(0, 60)}) → trying tolerant parser`)
+    try {
+      return await fetchRSSFeedTolerant(feedConfig)
+    } catch (tolerantErr) {
+      console.warn(`   ⚠️  tolerant parser also failed: ${(tolerantErr as Error).message.slice(0, 60)}`)
+      return []
+    }
+  }
+}
+
+async function fetchRSSFeedStrict(feedConfig: FeedConfig): Promise<Article[]> {
   const parser = new Parser()
   const feed = await parser.parseURL(feedConfig.url)
 
-  const articles: Article[] = []
+  return buildArticles(feed.items as RSSItem[], feedConfig)
+}
 
-  for (const item of feed.items) {
+async function fetchRSSFeedTolerant(feedConfig: FeedConfig): Promise<Article[]> {
+  const { data } = await axios.get(feedConfig.url, {
+    timeout: 10000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+    },
+    responseType: 'text',
+  })
+
+  const parsed = await parseStringPromise(data, {
+    explicitArray: false,
+    mergeAttrs: true,
+    normalize: true,
+    strict: false,
+  })
+
+  const channel = parsed?.rss?.channel
+  if (!channel) return []
+
+  const items = Array.isArray(channel.item) ? channel.item : channel.item ? [channel.item] : []
+
+  return buildArticles(items as RSSItem[], feedConfig)
+}
+
+interface RSSItem {
+  title?: string
+  link?: string | { _?: string; $?: { href?: string } }
+  pubDate?: string
+  'content:encoded'?: string
+  content?: string
+  description?: string
+}
+
+async function buildArticles(items: RSSItem[], feedConfig: FeedConfig): Promise<Article[]> {
+  const articles: Article[] = []
+  for (const item of items) {
     const pubDate = item.pubDate ? new Date(item.pubDate) : null
 
     if (!pubDate || pubDate < START_DATE || pubDate > END_DATE) {
       continue
     }
 
-    // WordPress/SPIP: content:encoded is exposed as content by rss-parser
+    // Resolve link: xml2js may nest it as { _: "url" } or { $: { href: "url" } }
+    let link = ''
+    if (typeof item.link === 'string') {
+      link = item.link
+    } else if (item.link && typeof item.link === 'object') {
+      link = (item.link as Record<string, unknown>)._ as string ||
+             ((item.link as Record<string, unknown>).$ as Record<string, string>)?.href || ''
+    }
+
     const rawContent =
-      (item as Record<string, unknown>)['content:encoded'] as string ||
+      item['content:encoded'] ||
       item.content ||
       item.description ||
       ''
 
     let cleanText = cleanHTML(rawContent)
 
-    // If RSS only gave a short excerpt, fetch the full article
-    if (cleanText.length < 500 && item.link) {
-      const fullText = await fetchFullArticle(item.link)
+    if (cleanText.length < 500 && link) {
+      const fullText = await fetchFullArticle(link)
       if (fullText && fullText.length > cleanText.length) {
         cleanText = fullText
       }
@@ -109,7 +194,7 @@ async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
     const contentHash = createHash('sha256').update(cleanText).digest('hex')
 
     articles.push({
-      url: item.link || '',
+      url: link,
       medium: feedConfig.medium,
       title: item.title || '',
       publishedAt: pubDate,
@@ -130,13 +215,13 @@ function cleanHTML(html: string): string {
   return text
 }
 
+const scrapeDb = newKyselyPostgresql()
+
 async function saveAndClassify(
   article: Article,
   region: string,
 ): Promise<{ id: number | null; isRelevant: boolean | null }> {
-  const db = newKyselyPostgresql()
-
-  const existing = await db
+  const existing = await scrapeDb
     .selectFrom('source')
     .select('id')
     .where('url', '=', article.url)
@@ -147,7 +232,7 @@ async function saveAndClassify(
     return { id: null, isRelevant: null }
   }
 
-  const hashExisting = await db
+  const hashExisting = await scrapeDb
     .selectFrom('source')
     .select('id')
     .where('content_hash', '=', article.contentHash)
@@ -179,7 +264,7 @@ async function saveAndClassify(
     }
   }
 
-  const result = await db
+  const result = await scrapeDb
     .insertInto('source')
     .values({
       url: article.url,
@@ -203,12 +288,30 @@ async function saveAndClassify(
 }
 
 async function scrapeAllFeeds() {
-  console.log(`Starting scrape (${START_DATE.toISOString()} to ${END_DATE.toISOString()})\n`)
+  const feedFilter = process.env.SCRAPE_FEED || process.argv[2]
+
+  const feeds = feedFilter
+    ? RSS_FEEDS.filter(
+        (f) =>
+          f.medium.toLowerCase() === feedFilter.toLowerCase() ||
+          f.url.includes(feedFilter),
+      )
+    : RSS_FEEDS
+
+  if (feedFilter && feeds.length === 0) {
+    console.error(`❌ No feed matches "${feedFilter}". Available:`)
+    for (const f of RSS_FEEDS) console.error(`   ${f.medium} — ${f.url}`)
+    process.exit(1)
+  }
+
+  console.log(`Starting scrape (${START_DATE.toISOString().split('T')[0]} to ${END_DATE.toISOString().split('T')[0]})`)
+  if (feedFilter) console.log(`Filter: ${feedFilter} (${feeds.length} feed(s) matched)\n`)
+  else console.log(`All ${feeds.length} feeds\n`)
 
   let totalStored = 0
   let totalRelevant = 0
 
-  for (const feed of RSS_FEEDS) {
+  for (const feed of feeds) {
     console.log(`📡 ${feed.medium} (${feed.region})`)
     try {
       const articles = await fetchRSSFeed(feed)
@@ -238,5 +341,3 @@ if (isMain) {
       process.exit(1)
     })
 }
-
-export { scrapeAllFeeds, fetchRSSFeed, cleanHTML, saveAndClassify }

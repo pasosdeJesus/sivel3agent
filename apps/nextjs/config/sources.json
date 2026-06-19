@@ -1,0 +1,86 @@
+{
+  "active": [
+    { "name": "INDEPAZ", "url": "https://indepaz.org.co/feed/", "region": "Colombia" },
+    { "name": "El Tiempo", "url": "https://www.eltiempo.com/rss/justicia_conflicto-y-narcotrafico.xml", "region": "Colombia" },
+    { "name": "HRW", "url": "https://www.hrw.org/rss/news", "region": "Colombia" },
+    { "name": "ReliefWeb", "url": "https://reliefweb.int/updates/rss.xml?search=primary_country.iso3:PSE", "region": "Palestine" },
+    { "name": "MiPutumayo Noticias", "url": "https://miputumayo.com.co/feed/", "region": "Putumayo" },
+    { "name": "Verdad Abierta", "url": "https://verdadabierta.com/feed/", "region": "Colombia" },
+    { "name": "Comisión Intereclesial", "url": "https://www.justiciaypazcolombia.com/feed/", "region": "Colombia" },
+    { "name": "Prensa Rural", "url": "https://prensarural.org/spip/spip.php?page=backend", "region": "Colombia" },
+    { "name": "Contagio Radio", "url": "https://www.contagioradio.com/feed/", "region": "Colombia" },
+    { "name": "Las2Orillas", "url": "https://www.las2orillas.co/feed/", "region": "Colombia" },
+    { "name": "La República", "url": "https://www.larepublica.co/feed/", "region": "Colombia" },
+    { "name": "El Heraldo", "url": "https://www.elheraldo.co/feed/", "region": "Colombia" },
+    { "name": "La Razón", "url": "https://www.larazon.co/feed/", "region": "Colombia" },
+    { "name": "Vorágine", "url": "https://voragine.co/feed/", "region": "Colombia" },
+    { "name": "Mutante", "url": "https://mutante.org/feed/", "region": "Colombia" }
+  ],
+  "legacy": [
+    {
+      "name": "INDEPAZ",
+      "type": "wordpress",
+      "baseUrl": "https://indepaz.org.co",
+      "region": "Colombia",
+      "risk": "low",
+      "selectors": {
+        "list": "article h2 a, h2.entry-title a, h3 a",
+        "title": "h1.entry-title, h1",
+        "date": "time.entry-date, time",
+        "body": "div.entry-content, article .content"
+      }
+    },
+    {
+      "name": "Comisión Intereclesial",
+      "type": "wordpress",
+      "baseUrl": "https://www.justiciaypazcolombia.com",
+      "region": "Colombia",
+      "risk": "low",
+      "selectors": {
+        "list": "a[href*=\"/informe-\"], a[href*=\"/rendicion-\"], a[href*=\"/comunicado-\"]",
+        "title": "h1.entry-title, h1",
+        "date": "time.entry-date, time",
+        "body": "div.entry-content"
+      }
+    },
+    {
+      "name": "Contagio Radio",
+      "type": "wordpress",
+      "baseUrl": "https://www.contagioradio.com",
+      "region": "Colombia",
+      "risk": "high",
+      "selectors": {
+        "list": "h2 a, h3 a, .entry-title a",
+        "title": "h1, .entry-title",
+        "date": "time, .entry-date",
+        "body": "div.entry-content"
+      }
+    },
+    {
+      "name": "Las2Orillas",
+      "type": "wordpress",
+      "baseUrl": "https://www.las2orillas.co",
+      "region": "Colombia",
+      "risk": "low",
+      "selectors": {
+        "list": "h2 a, h3 a, .post-title a",
+        "title": "h1, .post-title",
+        "date": "time, .post-date",
+        "body": "div.entry-content, div.post-content"
+      }
+    },
+    {
+      "name": "Verdad Abierta",
+      "type": "wordpress",
+      "baseUrl": "https://verdadabierta.com",
+      "region": "Colombia",
+      "risk": "high",
+      "selectors": {
+        "list": "h2 a, h3 a, .entry-title a",
+        "title": "h1.entry-title, h1",
+        "date": "time.entry-date, time",
+        "body": "div.entry-content, article .content"
+      }
+    }
+  ]
+}

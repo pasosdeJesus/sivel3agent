@@ -60,6 +60,8 @@ Every script, module, and architectural decision must be documented following th
 -   **Run:** `cd apps/nextjs && make test`
 -   **Type check:** `cd apps/nextjs && make type`
 -   **DB mocks:** Use `createMockKysely()` from `@pasosdejesus/m/test-utils`, never raw `vi.mock()` for database
+-   **Current coverage:** 22 tests (3 suites: `index.test.ts`, `test-utils.example.test.ts`, `generate-and-send.test.ts`)
+-   **Test patterns:** Dependency injection (`generateAndSend(dbOverride?)`) for DB‑dependent functions; chainable mock DB using recursive builder; `vi.mock('child_process')` for wallet signing
 
 ---
 

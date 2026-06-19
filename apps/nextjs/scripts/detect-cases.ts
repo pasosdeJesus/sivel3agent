@@ -7,10 +7,21 @@ const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '5')
 async function detectCases() {
   const db = newKyselyPostgresql()
 
+  const pending = await db
+    .selectFrom('source')
+    .select((eb) => eb.fn.countAll<number>().as('c'))
+    .where('clean_text', 'is not', null)
+    .where('detected_at', 'is', null)
+    .executeTakeFirst()
+
+  console.log(`Pending articles: ${pending?.c || 0}\n`)
+
   const sources = await db
     .selectFrom('source')
     .select(['id', 'url', 'title', 'published_at', 'clean_text', 'medium'])
     .where('clean_text', 'is not', null)
+    .where('detected_at', 'is', null)
+    .orderBy('id')
     .limit(BATCH_SIZE)
     .execute()
 
@@ -38,6 +49,12 @@ async function detectCases() {
           sourceMedium: source.medium || 'Unknown',
         }),
     )
+
+    await db
+      .updateTable('source')
+      .set({ detected_at: new Date() })
+      .where('id', '=', source.id)
+      .execute()
 
     if (result.isCase && result.json) {
       // Save to pre_alert

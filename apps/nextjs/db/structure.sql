@@ -101,7 +101,10 @@ CREATE TABLE public.source (
     content_hash character varying(66),
     raw_content text,
     clean_text text,
-    metadata jsonb
+    metadata jsonb,
+    is_relevant boolean,
+    classification_reason text,
+    detected_at timestamp without time zone
 );
 
 
@@ -201,6 +204,27 @@ ALTER TABLE ONLY public.source
 
 ALTER TABLE ONLY public.source
     ADD CONSTRAINT source_url_key UNIQUE (url);
+
+
+--
+-- Name: idx_source_detected_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_source_detected_at ON public.source USING btree (detected_at);
+
+
+--
+-- Name: idx_source_is_relevant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_source_is_relevant ON public.source USING btree (is_relevant);
+
+
+--
+-- Name: idx_source_medium; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_source_medium ON public.source USING btree (medium);
 
 
 --

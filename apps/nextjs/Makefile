@@ -1,5 +1,8 @@
 .PHONY: test type dev health
 
+scrape:
+	node_modules/.bin/tsx scripts/scrape-news.ts
+
 test:
 	CI=true DOTENV_QUIET=true npx vitest run
 

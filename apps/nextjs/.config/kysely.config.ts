@@ -1,4 +1,7 @@
-import 'dotenv/config'
+import { config as dotenvConfig } from 'dotenv'
+import { resolve } from 'path'
+
+dotenvConfig({ path: process.env.DOTENV_CONFIG_PATH || resolve(process.cwd(), '../.env') })
 import { Kysely, PostgresDialect } from 'kysely'
 import { defineConfig, getKnexTimestampPrefix } from 'kysely-ctl'
 import { Pool } from 'pg'
