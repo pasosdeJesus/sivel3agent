@@ -3,11 +3,12 @@ allowBuilds:
   bufferutil: true
   esbuild: true
   keccak: true
+  puppeteer: true
   sharp: true
   utf-8-validate: true
 
 overrides:
   '@parcel/watcher': npm:@parcel/watcher-wasm
-  rollup: npm:@rollup/wasm-node
-  lightningcss: npm:lightningcss-wasm
   '@tailwindcss/oxide': npm:@tailwindcss/oxide-wasm32-wasi
+  lightningcss: npm:lightningcss-wasm
+  rollup: npm:@rollup/wasm-node

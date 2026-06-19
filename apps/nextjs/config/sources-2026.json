@@ -1,0 +1,132 @@
+[
+  {
+    "name": "Verdad Abierta",
+    "type": "wordpress",
+    "baseUrl": "https://verdadabierta.com",
+    "region": "Colombia",
+    "priority": 1,
+    "selectors": {
+      "list": "article h2 a, h2.entry-title a, h3 a",
+      "title": "h1.entry-title, h1",
+      "date": "time.entry-date, time",
+      "body": "div.entry-content, article .content"
+    }
+  },
+  {
+    "name": "Comisión Intereclesial",
+    "type": "wordpress",
+    "baseUrl": "https://www.justiciaypazcolombia.com",
+    "region": "Colombia",
+    "priority": 1,
+    "selectors": {
+      "list": "article h2 a, h2.entry-title a",
+      "title": "h1.entry-title, h1",
+      "date": "time.entry-date, time",
+      "body": "div.entry-content"
+    }
+  },
+  {
+    "name": "INDEPAZ",
+    "type": "wordpress",
+    "baseUrl": "https://indepaz.org.co",
+    "region": "Colombia",
+    "priority": 1,
+    "selectors": {
+      "list": "article h2 a, h2.entry-title a, h3 a",
+      "title": "h1.entry-title, h1",
+      "date": "time.entry-date, time",
+      "body": "div.entry-content, article .content"
+    }
+  },
+  {
+    "name": "El Espectador",
+    "type": "wordpress",
+    "baseUrl": "https://www.elespectador.com",
+    "region": "Colombia",
+    "priority": 2,
+    "selectors": {
+      "list": "h2 a, h3 a, a[data-article-card]",
+      "title": "h1, .article-title",
+      "date": "time",
+      "body": "div.article-content, div.entry-content, .article-body"
+    }
+  },
+  {
+    "name": "El Colombiano",
+    "type": "wordpress",
+    "baseUrl": "https://www.elcolombiano.com",
+    "region": "Colombia",
+    "priority": 2,
+    "selectors": {
+      "list": "h2 a, h3 a, .title a",
+      "title": "h1, .article-title, .title",
+      "date": "time, .date",
+      "body": "div.article-content, div.entry-content, .body"
+    }
+  },
+  {
+    "name": "La Silla Vacía",
+    "type": "wordpress",
+    "baseUrl": "https://www.lasillavacia.com",
+    "region": "Colombia",
+    "priority": 2,
+    "selectors": {
+      "list": "h2 a, h3 a, .post-title a",
+      "title": "h1, .post-title",
+      "date": "time, .post-date",
+      "body": "div.entry-content, div.post-content, .article-body"
+    }
+  },
+  {
+    "name": "Contagio Radio",
+    "type": "wordpress",
+    "baseUrl": "https://www.contagioradio.com",
+    "region": "Colombia",
+    "priority": 2,
+    "selectors": {
+      "list": "h2 a, h3 a, .entry-title a",
+      "title": "h1, .entry-title",
+      "date": "time, .entry-date",
+      "body": "div.entry-content"
+    }
+  },
+  {
+    "name": "Las2Orillas",
+    "type": "wordpress",
+    "baseUrl": "https://www.las2orillas.co",
+    "region": "Colombia",
+    "priority": 3,
+    "selectors": {
+      "list": "h2 a, h3 a, .post-title a",
+      "title": "h1, .post-title",
+      "date": "time, .post-date",
+      "body": "div.entry-content, div.post-content"
+    }
+  },
+  {
+    "name": "MiPutumayo Noticias",
+    "type": "wordpress",
+    "baseUrl": "https://miputumayo.com.co",
+    "region": "Putumayo",
+    "priority": 1,
+    "selectors": {
+      "list": "article h2 a, h2.entry-title a",
+      "title": "h1.entry-title, h1",
+      "date": "time.entry-date, time",
+      "body": "div.entry-content"
+    }
+  },
+  {
+    "name": "Conexión Putumayo",
+    "type": "wordpress",
+    "baseUrl": "https://conexionputumayo.com",
+    "region": "Putumayo",
+    "priority": 1,
+    "selectors": {
+      "list": "article h2 a, h2.entry-title a",
+      "title": "h1.entry-title, h1",
+      "date": "time.entry-date, time",
+      "body": "div.entry-content"
+    }
+  }
+]

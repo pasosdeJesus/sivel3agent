@@ -126,8 +126,8 @@ Responde SOLO este JSON (sin explicaciones, sin markdown):
       "ocupacion": "ocupación del tesauro",
       "estado": "muerto, herido, desaparecido, desplazado, amenazado"
     }],
-    "grupos": [{"nombre_grupo": "NOMBRE EN MAYÚSCULAS del grupo armado responsable"}],
-    "presuntos_responsables_individuales": [{"nombre": "NOMBRE EN MAYÚSCULAS si se menciona"}],
+    "grupos": [{"nombre_grupo": "NOMBRE EN MAYÚSCULAS del grupo armado responsable. Si no se menciona explícitamente, omitir este campo"}],
+    "presuntos_responsables_individuales": [{"nombre": "NOMBRE EN MAYÚSCULAS. SOLO si aparece en el texto. NUNCA inventar nombres"}],
     "cantidad": {"muertos": N, "heridos": N, "desplazados": N},
     "fuentes": [{"nombre_fuente": "${news.sourceMedium}", "fecha": "${news.date}", "ubicacion": "${news.sourceUrl}"}]
   }]
@@ -147,7 +147,7 @@ async function callLLM(prompt: string): Promise<string> {
       model: LLM_MODEL,
       prompt: prompt,
       stream: false,
-      options: { temperature: 0.2, top_p: 0.9 },
+      options: { temperature: 0.0, top_p: 0.9 },
     }),
   })
 

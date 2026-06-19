@@ -1,6 +1,7 @@
 import Parser from 'rss-parser'
 import { parse as parseHTML } from 'node-html-parser'
 import { createHash } from 'crypto'
+import axios from 'axios'
 import { newKyselyPostgresql } from '../.config/kysely.config.js'
 import { classifyByKeywords } from '../lib/classifyByKeywords'
 import { classifyNewsLLM } from '../lib/classifyNewsLLM'
@@ -20,6 +21,13 @@ const RSS_FEEDS: FeedConfig[] = [
   { url: 'https://verdadabierta.com/feed/', medium: 'Verdad Abierta', region: 'Colombia' },
   { url: 'https://www.justiciaypazcolombia.com/feed/', medium: 'Comisión Intereclesial', region: 'Colombia' },
   { url: 'https://prensarural.org/spip/spip.php?page=backend', medium: 'Prensa Rural', region: 'Colombia' },
+  { url: 'https://www.contagioradio.com/feed/', medium: 'Contagio Radio', region: 'Colombia' },
+  { url: 'https://www.las2orillas.co/feed/', medium: 'Las2Orillas', region: 'Colombia' },
+  { url: 'https://www.larepublica.co/feed/', medium: 'La República', region: 'Colombia' },
+  { url: 'https://www.elheraldo.co/feed/', medium: 'El Heraldo', region: 'Colombia' },
+  { url: 'https://www.larazon.co/feed/', medium: 'La Razón', region: 'Colombia' },
+  { url: 'https://voragine.co/feed/', medium: 'Vorágine', region: 'Colombia' },
+  { url: 'https://mutante.org/feed/', medium: 'Mutante', region: 'Colombia' },
 ]
 
 const START_DATE = new Date('2025-07-01')
@@ -33,6 +41,40 @@ interface Article {
   rawContent: string
   cleanText: string
   contentHash: string
+}
+
+async function fetchFullArticle(url: string): Promise<string> {
+  try {
+    const { data } = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+      },
+    })
+    const root = parseHTML(data)
+
+    // Try common article body selectors
+    for (const sel of [
+      'div.entry-content',
+      'article .content',
+      'article',
+      'div.post-content',
+      'div.article-body',
+      'div.article-content',
+      'main article',
+      'main',
+    ]) {
+      const el = root.querySelector(sel)
+      if (el) {
+        el.querySelectorAll('script, style, nav, footer, .comments, .sidebar, .widget, .share-buttons').forEach((e) => e.remove())
+        const text = el.textContent?.replace(/\s+/g, ' ').trim() || ''
+        if (text.length > 300) return text
+      }
+    }
+    return ''
+  } catch {
+    return ''
+  }
 }
 
 async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
@@ -55,7 +97,15 @@ async function fetchRSSFeed(feedConfig: FeedConfig): Promise<Article[]> {
       item.description ||
       ''
 
-    const cleanText = cleanHTML(rawContent)
+    let cleanText = cleanHTML(rawContent)
+
+    // If RSS only gave a short excerpt, fetch the full article
+    if (cleanText.length < 500 && item.link) {
+      const fullText = await fetchFullArticle(item.link)
+      if (fullText && fullText.length > cleanText.length) {
+        cleanText = fullText
+      }
+    }
     const contentHash = createHash('sha256').update(cleanText).digest('hex')
 
     articles.push({
