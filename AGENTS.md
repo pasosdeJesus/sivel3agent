@@ -74,4 +74,12 @@ framework and principles.
 
 **Git operations:** The AI agent **must not** execute write git commands (`git commit`, `git push`, `git merge`, `git rebase`, `git tag`, `git stash`, `git branch -d`, etc.). Read-only operations (`git status`, `git diff`, `git log`, `git blame`) are permitted. Only the human maintainer performs write operations.
 
+**Gotchas (see doc/HANDOFF.md for full list):**
+- Config: `config/sources.json` (active + legacy). Not `sources-2026.json`.
+- Wallet: `sivel3agent-dev` in `~/.m/wallets/`
+- Crawlee storage: `apps/nextjs/storage/` is in `.gitignore`
+- sivel.xyz: `JSON.stringify()` for jsonb columns with `pg` driver
+- `detect-cases.ts` filters `WHERE detected_at IS NULL`
+- `generate-and-send.ts` reads `pre_alert WHERE status='pending'` (not `source`)
+
 

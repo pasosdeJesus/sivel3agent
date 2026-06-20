@@ -22,9 +22,13 @@ Se recibe una fuente (noticia de prensa, pronunciamiento de organización social
 
 ### Paso 2: Extracción de información
 Responder las 9 preguntas fundamentales:
-- **¿QUÉ?** El hecho ocurrido
-- **¿QUIÉN?** El presunto responsable
-- **¿CONTRA QUIÉN?** La víctima (quién era, sector social, antecedentes)
+- **¿QUÉ?** El hecho ocurrido (ejecución, amenaza, desplazamiento, bloqueo de vías, bombardeo, detención, tortura, desaparición, confinamiento)
+- **¿QUIÉN?** El presunto responsable (grupo armado, fuerza estatal, actor no identificado). Identificar nombre específico si aparece en el texto.
+- **¿CONTRA QUIÉN?** La víctima:
+  - **Individual:** nombre, ocupación, sector social, pertenencia étnica
+  - **Colectiva:** comunidad, resguardo, municipio, población civil afectada. Ej: "POBLACIÓN DE EL CHARCO", "COMUNIDAD NASA DEL RESGUARDO X"
+  - **Víctima NN:** si no se conoce la identidad pero sí el hecho, registrar como NN con ocupación conocida
+  - La víctima se define por el acto de violencia cometido contra ella, no por un campo de estado
 - **¿CÓMO?** Métodos, vehículos, armas, hora, modo
 - **¿POR QUÉ?** Móviles que causaron el hecho
 - **¿CUÁNDO?** Fecha y hora exactas
@@ -33,10 +37,31 @@ Responder las 9 preguntas fundamentales:
 - **LA OTRA VERSIÓN**: Versiones contradictorias (oficial vs. comunitaria)
 
 ### Paso 3: Clasificación del hecho
-Utilizar el marco conceptual para asignar la categoría correcta (consultar `enum` de `agresion_particular` en el schema):
-- **Autor estatal/paraestatal** → DD.HH. (códigos A...)
-- **Autor no estatal/no identificado con móvil político** → Violencia Político-Social (códigos B...)
-- **Contexto de conflicto armado** → Infracciones al DIHC (códigos D...) o Acciones Bélicas (códigos C...)
+El acto de violencia (`actos`) es el elemento central — define la categoría y vincula a la víctima. Cada `acto` debe tener:
+- `agresion_particular`: código del tesauro (A10, B40, C66, D703, etc.)
+- `id_victima_individual` o `id_victima_colectiva`: referencia a la víctima
+
+**Siempre debe existir al menos un `acto` con `agresion_particular` válida.** Sin acto no hay caso.
+
+Clasificación por tipo de autor:
+- **Autor estatal/paraestatal** (Ejército, Policía, paramilitares) → DD.HH. (códigos A…)
+- **Autor no estatal con móvil político** (guerrilla, disidencias, grupos armados no estatales, desconocidos con móvil político) → Violencia Político-Social (códigos B…)
+- **En medio de acción bélica** (combates, bombardeos, bloqueo de vías como táctica militar entre actores armados) → Acción Bélica (códigos C…)
+- **Infracción al DIH en conflicto armado** (ataque indiscriminado a población civil, desplazamiento forzado como instrumento de guerra, hambre como método de guerra, confinamiento de poblaciones, bloqueo de vías con afectación a civiles, muerte de civil en acción bélica) → DIHC (códigos D…). Ver marco conceptual para lista completa.
+- **Acción Bélica** (combates, bombardeos, bloqueo de vías como táctica militar entre combatientes) → Acción Bélica (códigos C…)
+
+Hechos que SÍ constituyen caso:
+- Ejecución, asesinato, desaparición, tortura, secuestro, amenaza (individual o colectiva), desplazamiento forzado, confinamiento, detención arbitraria
+- Bloqueo de vías por actor armado: C66 si es táctica militar, D86/D90/D906 si afecta población civil
+- Paro armado que confina población civil (D906)
+- Ataque indiscriminado (D90), bombardeo que afecta población civil (D703)
+
+Hechos que NO constituyen caso por sí solos:
+- Operaciones militares legítimas sin víctimas civiles
+- Capturas policiales, procesos judiciales
+- Protestas sin violencia documentada
+- Análisis académicos o de coyuntura sin hecho concreto
+- Destrucción de infraestructura de droga sin víctimas
 
 ### Paso 4: Redacción del memo (campo `hechos`)
 - Comenzar con **QUIÉN + QUÉ + A QUIÉN** (ej: "Paramilitares ejecutaron a...", "Desconocidos asesinaron a...")

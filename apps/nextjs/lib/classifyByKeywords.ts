@@ -48,6 +48,23 @@ export function classifyByKeywords(
 ): { relevant: boolean; confidence: 'high' | 'low'; reason: string } {
   const textLower = text.toLowerCase()
   const titleLower = title.toLowerCase()
+  const combined = textLower + ' ' + titleLower
+
+  // Reject analysis/opinion articles — these are not concrete violence events
+  const ANALYSIS_PATTERNS = [
+    'análisis', 'coyuntura', 'editorial', 'columna de opinión',
+    'boletín de noticias', 'convocatoria de candidaturas',
+    'comunicado oficial', 'proclama', 'solidaridad con',
+    'diálogos sobre', 'pensamiento complejo',
+    'más allá de', 'la disputa por', 'la guerra total',
+    'el clan del golfo: un orco', 'los yerros de',
+    'minjusticia anuncia', 'propone', 'reforma',
+    'ley de', 'radicará', 'anuncio',
+  ]
+  const isAnalysis = ANALYSIS_PATTERNS.some((p) => combined.includes(p))
+  if (isAnalysis) {
+    return { relevant: false, confidence: 'high', reason: 'analysis/opinion, not a concrete event' }
+  }
 
   const hasViolence = VIOLENCE_KEYWORDS.some(
     (k) => textLower.includes(k) || titleLower.includes(k),
@@ -60,6 +77,18 @@ export function classifyByKeywords(
   )
 
   if (hasViolence && (hasColombia || hasPalestine)) {
+    // Require concrete event: numbers + victims, action verbs, dates, or
+    // title clearly states a specific event (not analysis)
+    const titleSuggestsEvent =
+      /\b(asesinad|masacr|muert|secuestr|desaparici|desplazad|amenaz|atac|bombarde|combate|enfrentamient)\b/i.test(titleLower)
+    const hasConcreteEvent =
+      titleSuggestsEvent ||
+      /\b\d{1,3}\s+(muertos?|heridos?|desplazados?|víctimas?|victims?|personas?|asesinados?|killed|wounded)\b/i.test(combined) ||
+      /\b(asesinaron|ejecutaron|mataron|desplazaron|amenazaron|secuestraron|atacaron|bombardearon|killed|attacked|bombed)\b/i.test(combined) ||
+      /\b\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b/i.test(combined)
+    if (!hasConcreteEvent) {
+      return { relevant: false, confidence: 'low', reason: 'violence keywords but no concrete event' }
+    }
     const region = hasColombia ? 'Colombia' : 'Palestine'
     return { relevant: true, confidence: 'high', reason: `violence+${region}` }
   }
