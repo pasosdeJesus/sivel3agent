@@ -161,7 +161,21 @@ Single source of truth for all news sources. Used by both `scrape-news.ts` and `
 
 ### Script Execution Order (via cron)
 
-1. **`scrape-news.ts`** — 16 RSS feeds → fetchFullText → classify → store in `source`
+The pipeline is orchestrated by `scripts/run-agent.sh`, which runs three steps in sequence:
+
+```
+run-agent.sh → scrape-news.ts → detect-cases.ts → generate-and-send.ts
+```
+
+**Crontab setup:** one line, sources `.env` automatically from the script:
+
+```
+0 */6 * * * /opt/sivel3agent/apps/nextjs/scripts/run-agent.sh
+```
+
+The script reads `../../../.env` relative to its location, sources all environment variables, and runs the full pipeline (scrape → detect → send) with locking to prevent concurrent runs. Logs to `$SIVEL3AGENT_LOG_DIR/agent.log`.
+
+1. **`scrape-news.ts`** — 15 RSS feeds → fetchFullText → classify → store in `source`
 
    **Usage:** `node_modules/.bin/tsx scripts/scrape-news.ts [SOURCE_NAME|URL_FRAGMENT]`
 
